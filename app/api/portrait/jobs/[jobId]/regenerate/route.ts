@@ -4,7 +4,7 @@ import { after, NextResponse } from "next/server";
 import { getErrorInfo, getErrorMessage, PortraitError } from "@/lib/server/portrait-errors";
 import { createEmptyJob, mapJobToResponse, readJob, saveJob } from "@/lib/server/portrait-job-store";
 import { schedulePortraitJob } from "@/lib/server/portrait-job-runner";
-import { createId, sanitizeFileName } from "@/lib/server/portrait-utils";
+import { createId, sanitizeFileName, readRequestApiKey } from "@/lib/server/portrait-utils";
 import { getJobDir, writeFileBuffer } from "@/lib/server/portrait-storage";
 
 export const runtime = "nodejs";
@@ -13,8 +13,14 @@ type Context = {
   params: Promise<{ jobId: string }>;
 };
 
-export async function POST(_: Request, context: Context) {
+export async function POST(request: Request, context: Context) {
   try {
+    const requestApiKey = readRequestApiKey(request);
+    const hasRuntimeApiKey = Boolean(process.env.GEMINI_API_KEY?.trim() || requestApiKey);
+    if (!hasRuntimeApiKey) {
+      throw new PortraitError("Gemini API key is missing.");
+    }
+
     const { jobId } = await context.params;
     const previousJob = await readJob(jobId);
     const nextJobId = createId("job");
@@ -42,7 +48,7 @@ export async function POST(_: Request, context: Context) {
     await saveJob(nextJob);
 
     after(() => {
-      schedulePortraitJob(nextJobId);
+      schedulePortraitJob(nextJobId, requestApiKey);
     });
 
     return NextResponse.json(mapJobToResponse(nextJob), { status: 202 });

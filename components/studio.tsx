@@ -80,6 +80,7 @@ function ErrorActions({
 
 export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
   const [form, setForm] = useState<FormState>(() => createInitialForm(preset));
+  const [sessionApiKey, setSessionApiKey] = useState("");
   const [job, setJob] = useState<PortraitJobResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,14 +100,27 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
 
   const hasReferenceSlots = preset.referenceImagePaths.length > 0;
   const modelChain = [preset.preferredModel, ...preset.fallbackModels];
+  const hasSessionApiKey = sessionApiKey.trim().length > 0;
+  const hasRuntimeApiKey = hasGeminiApiKey || hasSessionApiKey;
 
   const isPolling = job?.status === "queued" || job?.status === "running";
-  const canSubmit = hasGeminiApiKey && !isSubmitting;
+  const canSubmit = hasRuntimeApiKey && !isSubmitting;
+
+  function createAuthHeaders() {
+    if (!hasSessionApiKey) {
+      return undefined;
+    }
+
+    return {
+      "x-gemini-api-key": sessionApiKey.trim(),
+    };
+  }
 
   async function fetchJob(jobId: string): Promise<PortraitJobResponse | null> {
     const response = await fetch(`/api/portrait/jobs/${jobId}`, {
       method: "GET",
       cache: "no-store",
+      headers: createAuthHeaders(),
     });
     const payload = (await response.json()) as PortraitJobResponse;
 
@@ -122,12 +136,12 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
   }
 
   useEffect(() => {
-    if (!hasGeminiApiKey) {
+    if (!hasRuntimeApiKey) {
       setSelfCheck({
         ok: false,
         checkedAt: new Date().toISOString(),
         warnings: [
-          `Gemini API key is missing. Add GEMINI_API_KEY to ${envFileHint} and restart the app.`,
+          `Gemini API key is missing. Add GEMINI_API_KEY to ${envFileHint} or paste a session key in the UI.`,
         ],
         entries: [],
       });
@@ -144,6 +158,7 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
         const response = await fetch("/api/diagnostics/models", {
           method: "GET",
           cache: "no-store",
+          headers: createAuthHeaders(),
         });
         const payload = (await response.json()) as ModelSelfCheckResponse;
 
@@ -175,7 +190,7 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
     return () => {
       cancelled = true;
     };
-  }, [envFileHint, hasGeminiApiKey]);
+  }, [envFileHint, hasRuntimeApiKey, sessionApiKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -218,7 +233,7 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [sessionApiKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -239,6 +254,7 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
     }
 
     const currentJobId = job.jobId;
+    const currentSessionApiKey = sessionApiKey.trim();
     let cancelled = false;
 
     async function pollJobStatus() {
@@ -252,7 +268,26 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
         }
 
         try {
-          const payload = await fetchJob(currentJobId);
+          const payload = await fetch(`/api/portrait/jobs/${currentJobId}`, {
+            method: "GET",
+            cache: "no-store",
+            headers: currentSessionApiKey
+              ? { "x-gemini-api-key": currentSessionApiKey }
+              : undefined,
+          }).then(async (response) => {
+            const parsedPayload = (await response.json()) as PortraitJobResponse;
+            if (!response.ok) {
+              if (response.status === 404) {
+                return null;
+              }
+
+              throw new Error(
+                parsedPayload.error ?? "Unable to refresh portrait job status.",
+              );
+            }
+
+            return parsedPayload;
+          });
           if (cancelled) {
             return;
           }
@@ -293,7 +328,7 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
         window.clearTimeout(pollTimer.current);
       }
     };
-  }, [job?.jobId, isPolling]);
+  }, [job?.jobId, isPolling, sessionApiKey]);
 
   useEffect(() => {
     function hasFiles(event: DragEvent) {
@@ -377,8 +412,8 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
   }, [job?.status]);
 
   const runtimeNotice = useMemo(() => {
-    if (!hasGeminiApiKey) {
-      return `missing GEMINI_API_KEY in ${envFileHint}`;
+    if (!hasRuntimeApiKey) {
+      return `missing GEMINI_API_KEY in ${envFileHint} (or paste session key)`;
     }
 
     if (selfCheckLoading) {
@@ -390,10 +425,10 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
     }
 
     return selfCheck?.warnings[0] ?? null;
-  }, [envFileHint, hasGeminiApiKey, selfCheck, selfCheckLoading]);
+  }, [envFileHint, hasRuntimeApiKey, selfCheck, selfCheckLoading]);
 
   const topBadge = useMemo(() => {
-    if (!hasGeminiApiKey) {
+    if (!hasRuntimeApiKey) {
       return "setup needed";
     }
 
@@ -406,7 +441,7 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
     }
 
     return null;
-  }, [hasGeminiApiKey, job?.error, job?.errorInfo?.retryable, selfCheck]);
+  }, [hasRuntimeApiKey, job?.error, job?.errorInfo?.retryable, selfCheck]);
 
   const animatedStatusText = useMemo(() => {
     switch (job?.status) {
@@ -422,8 +457,8 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!hasGeminiApiKey) {
-      setError(`Gemini API key is missing. Add GEMINI_API_KEY to ${envFileHint}.`);
+    if (!hasRuntimeApiKey) {
+      setError(`Gemini API key is missing. Add GEMINI_API_KEY to ${envFileHint} or paste a session key.`);
       return;
     }
 
@@ -446,6 +481,7 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
       const response = await fetch("/api/portrait/jobs", {
         method: "POST",
         body,
+        headers: createAuthHeaders(),
       });
 
       const payload = (await response.json()) as PortraitJobResponse;
@@ -475,6 +511,7 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
     setError(null);
     const response = await fetch(`/api/portrait/jobs/${job.jobId}/regenerate`, {
       method: "POST",
+      headers: createAuthHeaders(),
     });
     const payload = (await response.json()) as PortraitJobResponse;
 
@@ -616,6 +653,23 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
       <section className="workspace">
         <aside className="panel">
           <form className="stack controls" onSubmit={handleSubmit}>
+            <div className="field">
+              <label htmlFor="session-api-key">Gemini API key (session only)</label>
+              <input
+                id="session-api-key"
+                className="input"
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder={hasGeminiApiKey ? "optional override" : "paste API key"}
+                value={sessionApiKey}
+                onChange={(event) => setSessionApiKey(event.target.value)}
+              />
+              <div className="micro">
+                This key stays only in this browser tab memory and is never persisted to disk.
+              </div>
+            </div>
+
             <div
               className={`drop-input${isDraggingFile ? " is-dragging" : ""}`}
               onDragOver={handleDragOver}

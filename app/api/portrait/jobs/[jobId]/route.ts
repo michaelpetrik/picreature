@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 import { getErrorMessage, PortraitError } from "@/lib/server/portrait-errors";
 import { mapJobToResponse, readJob } from "@/lib/server/portrait-job-store";
 import { schedulePortraitJob } from "@/lib/server/portrait-job-runner";
+import { readRequestApiKey } from "@/lib/server/portrait-utils";
 
 export const runtime = "nodejs";
 
@@ -9,13 +10,14 @@ type Context = {
   params: Promise<{ jobId: string }>;
 };
 
-export async function GET(_: Request, context: Context) {
+export async function GET(request: Request, context: Context) {
   try {
     const { jobId } = await context.params;
     const job = await readJob(jobId);
+    const requestApiKey = readRequestApiKey(request);
     if (job.status === "queued" || job.status === "running") {
       after(() => {
-        schedulePortraitJob(jobId);
+        schedulePortraitJob(jobId, requestApiKey);
       });
     }
     return NextResponse.json(mapJobToResponse(job), { status: 200 });

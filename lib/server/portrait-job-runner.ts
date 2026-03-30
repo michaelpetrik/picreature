@@ -7,7 +7,7 @@ import { createId } from "@/lib/server/portrait-utils";
 
 const activeJobs = new Map<string, Promise<void>>();
 
-export async function runPortraitJob(jobId: string) {
+export async function runPortraitJob(jobId: string, apiKey?: string) {
   const job = await readJob(jobId);
 
   job.status = "running";
@@ -17,7 +17,7 @@ export async function runPortraitJob(jobId: string) {
   await saveJob(job);
 
   try {
-    const client = new GeminiPortraitClient();
+    const client = new GeminiPortraitClient(apiKey);
     const result = await client.generateVariants({
       sourceMimeType: job.sourceMimeType,
       sourcePath: job.sourcePath,
@@ -86,8 +86,26 @@ export function ensurePortraitJobRunning(jobId: string): Promise<void> {
   return task;
 }
 
-export function schedulePortraitJob(jobId: string) {
-  void ensurePortraitJobRunning(jobId).catch((error) => {
+export function schedulePortraitJob(jobId: string, apiKey?: string) {
+  const existingTask = activeJobs.get(jobId);
+  if (existingTask) {
+    return;
+  }
+
+  const task = (async () => {
+    const job = await readJob(jobId);
+    if (job.status === "completed" || job.status === "failed") {
+      return;
+    }
+
+    await runPortraitJob(jobId, apiKey);
+  })().finally(() => {
+    activeJobs.delete(jobId);
+  });
+
+  activeJobs.set(jobId, task);
+
+  void task.catch((error) => {
     console.error(`Unable to finish portrait job ${jobId}:`, error);
   });
 }

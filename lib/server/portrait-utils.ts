@@ -7,6 +7,11 @@ export function createId(prefix: string): string {
   return `${prefix}_${crypto.randomUUID()}`;
 }
 
+export function readRequestApiKey(request: Request): string | undefined {
+  const value = request.headers.get("x-gemini-api-key")?.trim();
+  return value ? value : undefined;
+}
+
 export function sanitizeFileName(fileName: string): string {
   const ext = path.extname(fileName);
   const base = path.basename(fileName, ext).replace(/[^a-zA-Z0-9-_]/g, "-");

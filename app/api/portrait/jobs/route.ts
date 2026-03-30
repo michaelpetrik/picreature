@@ -5,7 +5,12 @@ import { ensureJobRoot, writeFileBuffer } from "@/lib/server/portrait-storage";
 import { createEmptyJob, mapJobToResponse, saveJob } from "@/lib/server/portrait-job-store";
 import { getErrorInfo, getErrorMessage, PortraitError } from "@/lib/server/portrait-errors";
 import { schedulePortraitJob } from "@/lib/server/portrait-job-runner";
-import { ensureValidUpload, sanitizeFileName, createId } from "@/lib/server/portrait-utils";
+import {
+  ensureValidUpload,
+  sanitizeFileName,
+  createId,
+  readRequestApiKey,
+} from "@/lib/server/portrait-utils";
 import { getJobDir } from "@/lib/server/portrait-storage";
 import type { SubjectGender } from "@/lib/server/portrait-types";
 
@@ -14,6 +19,11 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   try {
     await ensureJobRoot();
+    const requestApiKey = readRequestApiKey(request);
+    const hasRuntimeApiKey = Boolean(process.env.GEMINI_API_KEY?.trim() || requestApiKey);
+    if (!hasRuntimeApiKey) {
+      throw new PortraitError("Gemini API key is missing.");
+    }
 
     const formData = await request.formData();
     const image = formData.get("image");
@@ -59,7 +69,7 @@ export async function POST(request: Request) {
     await saveJob(job);
 
     after(() => {
-      schedulePortraitJob(jobId);
+      schedulePortraitJob(jobId, requestApiKey);
     });
 
     return NextResponse.json(mapJobToResponse(job), { status: 202 });
