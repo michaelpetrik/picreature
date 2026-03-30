@@ -1,0 +1,8 @@
+.next
+node_modules
+.DS_Store
+.cache
+coverage
+*.log
+!.gitkeep
+.env
