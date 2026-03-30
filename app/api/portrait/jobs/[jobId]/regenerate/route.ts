@@ -1,9 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getErrorInfo, getErrorMessage, PortraitError } from "@/lib/server/portrait-errors";
 import { createEmptyJob, mapJobToResponse, readJob, saveJob } from "@/lib/server/portrait-job-store";
-import { runPortraitJob } from "@/lib/server/portrait-job-runner";
+import { schedulePortraitJob } from "@/lib/server/portrait-job-runner";
 import { createId, sanitizeFileName } from "@/lib/server/portrait-utils";
 import { getJobDir, writeFileBuffer } from "@/lib/server/portrait-storage";
 
@@ -41,7 +41,9 @@ export async function POST(_: Request, context: Context) {
     nextJob.statusMessage = `Regenerated from ${jobId.slice(0, 8)}. Waiting for Gemini generation.`;
     await saveJob(nextJob);
 
-    void runPortraitJob(nextJobId);
+    after(() => {
+      schedulePortraitJob(nextJobId);
+    });
 
     return NextResponse.json(mapJobToResponse(nextJob), { status: 202 });
   } catch (error) {

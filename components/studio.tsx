@@ -16,6 +16,7 @@ type StudioProps = {
 };
 
 const POLL_INTERVAL_MS = 2200;
+const ACTIVE_JOB_STORAGE_KEY = "picreature.activeJobId";
 
 type FormState = {
   file: File | null;
@@ -102,6 +103,24 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
   const isPolling = job?.status === "queued" || job?.status === "running";
   const canSubmit = hasGeminiApiKey && !isSubmitting;
 
+  async function fetchJob(jobId: string): Promise<PortraitJobResponse | null> {
+    const response = await fetch(`/api/portrait/jobs/${jobId}`, {
+      method: "GET",
+      cache: "no-store",
+    });
+    const payload = (await response.json()) as PortraitJobResponse;
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+
+      throw new Error(payload.error ?? "Unable to refresh portrait job status.");
+    }
+
+    return payload;
+  }
+
   useEffect(() => {
     if (!hasGeminiApiKey) {
       setSelfCheck({
@@ -159,21 +178,117 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
   }, [envFileHint, hasGeminiApiKey]);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const storedJobId = window.localStorage.getItem(ACTIVE_JOB_STORAGE_KEY);
+    if (!storedJobId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const restoredJob = await fetchJob(storedJobId);
+        if (cancelled) {
+          return;
+        }
+
+        if (!restoredJob) {
+          window.localStorage.removeItem(ACTIVE_JOB_STORAGE_KEY);
+          return;
+        }
+
+        setJob(restoredJob);
+      } catch (restoreError) {
+        if (cancelled) {
+          return;
+        }
+
+        setError(
+          restoreError instanceof Error
+            ? restoreError.message
+            : "Unable to restore the last portrait job.",
+        );
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!job?.jobId) {
+      window.localStorage.removeItem(ACTIVE_JOB_STORAGE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(ACTIVE_JOB_STORAGE_KEY, job.jobId);
+  }, [job?.jobId]);
+
+  useEffect(() => {
     if (!job?.jobId || !isPolling) {
       return;
     }
 
-    pollTimer.current = window.setTimeout(async () => {
-      const response = await fetch(`/api/portrait/jobs/${job.jobId}`, {
-        method: "GET",
-        cache: "no-store",
-      });
+    const currentJobId = job.jobId;
+    let cancelled = false;
 
-      const payload = (await response.json()) as PortraitJobResponse;
-      setJob(payload);
-    }, POLL_INTERVAL_MS);
+    async function pollJobStatus() {
+      while (!cancelled) {
+        await new Promise<void>((resolve) => {
+          pollTimer.current = window.setTimeout(resolve, POLL_INTERVAL_MS);
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        try {
+          const payload = await fetchJob(currentJobId);
+          if (cancelled) {
+            return;
+          }
+
+          if (!payload) {
+            setJob(null);
+            setError("Portrait job expired or was not found.");
+            return;
+          }
+
+          setJob(payload);
+          setError((current) =>
+            current === "Unable to refresh portrait job status." ? null : current,
+          );
+
+          if (payload.status !== "queued" && payload.status !== "running") {
+            return;
+          }
+        } catch (pollError) {
+          if (cancelled) {
+            return;
+          }
+
+          setError(
+            pollError instanceof Error
+              ? pollError.message
+              : "Unable to refresh portrait job status.",
+          );
+        }
+      }
+    }
+
+    void pollJobStatus();
 
     return () => {
+      cancelled = true;
       if (pollTimer.current) {
         window.clearTimeout(pollTimer.current);
       }
@@ -292,6 +407,17 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
 
     return null;
   }, [hasGeminiApiKey, job?.error, job?.errorInfo?.retryable, selfCheck]);
+
+  const animatedStatusText = useMemo(() => {
+    switch (job?.status) {
+      case "queued":
+        return "queued for generation";
+      case "running":
+        return "generating portraits";
+      default:
+        return null;
+    }
+  }, [job?.status]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -626,7 +752,17 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
 
         <section className="panel">
           <div className="output-head">
-            <span>{currentStatusLabel}</span>
+            <span
+              className={animatedStatusText ? "status-label is-active" : "status-label"}
+            >
+              <span>{currentStatusLabel}</span>
+              {animatedStatusText ? (
+                <span className="status-activity" aria-live="polite">
+                  <span>{animatedStatusText}</span>
+                  <span className="status-dots" aria-hidden="true" />
+                </span>
+              ) : null}
+            </span>
             {job?.selectedModelLabel ? <span>{job.selectedModelLabel}</span> : null}
           </div>
 

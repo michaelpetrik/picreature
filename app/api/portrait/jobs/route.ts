@@ -1,10 +1,10 @@
 import path from "node:path";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { portraitPreset } from "@/lib/config/portrait-preset";
 import { ensureJobRoot, writeFileBuffer } from "@/lib/server/portrait-storage";
 import { createEmptyJob, mapJobToResponse, saveJob } from "@/lib/server/portrait-job-store";
 import { getErrorInfo, getErrorMessage, PortraitError } from "@/lib/server/portrait-errors";
-import { runPortraitJob } from "@/lib/server/portrait-job-runner";
+import { schedulePortraitJob } from "@/lib/server/portrait-job-runner";
 import { ensureValidUpload, sanitizeFileName, createId } from "@/lib/server/portrait-utils";
 import { getJobDir } from "@/lib/server/portrait-storage";
 import type { SubjectGender } from "@/lib/server/portrait-types";
@@ -58,7 +58,9 @@ export async function POST(request: Request) {
     });
     await saveJob(job);
 
-    void runPortraitJob(jobId);
+    after(() => {
+      schedulePortraitJob(jobId);
+    });
 
     return NextResponse.json(mapJobToResponse(job), { status: 202 });
   } catch (error) {

@@ -5,6 +5,8 @@ import { readJob, saveJob } from "@/lib/server/portrait-job-store";
 import { writeFileBuffer } from "@/lib/server/portrait-storage";
 import { createId } from "@/lib/server/portrait-utils";
 
+const activeJobs = new Map<string, Promise<void>>();
+
 export async function runPortraitJob(jobId: string) {
   const job = await readJob(jobId);
 
@@ -61,4 +63,31 @@ export async function runPortraitJob(jobId: string) {
     job.errorInfo = getErrorInfo(error);
     await saveJob(job);
   }
+}
+
+export function ensurePortraitJobRunning(jobId: string): Promise<void> {
+  const existingTask = activeJobs.get(jobId);
+  if (existingTask) {
+    return existingTask;
+  }
+
+  const task = (async () => {
+    const job = await readJob(jobId);
+    if (job.status === "completed" || job.status === "failed") {
+      return;
+    }
+
+    await runPortraitJob(jobId);
+  })().finally(() => {
+    activeJobs.delete(jobId);
+  });
+
+  activeJobs.set(jobId, task);
+  return task;
+}
+
+export function schedulePortraitJob(jobId: string) {
+  void ensurePortraitJobRunning(jobId).catch((error) => {
+    console.error(`Unable to finish portrait job ${jobId}:`, error);
+  });
 }

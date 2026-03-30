@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getErrorMessage, PortraitError } from "@/lib/server/portrait-errors";
 import { mapJobToResponse, readJob } from "@/lib/server/portrait-job-store";
+import { schedulePortraitJob } from "@/lib/server/portrait-job-runner";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,11 @@ export async function GET(_: Request, context: Context) {
   try {
     const { jobId } = await context.params;
     const job = await readJob(jobId);
+    if (job.status === "queued" || job.status === "running") {
+      after(() => {
+        schedulePortraitJob(jobId);
+      });
+    }
     return NextResponse.json(mapJobToResponse(job), { status: 200 });
   } catch (error) {
     const status = error instanceof PortraitError ? error.statusCode : 500;

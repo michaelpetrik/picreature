@@ -391,6 +391,38 @@ select.input {
   letter-spacing: 0.08em;
 }
 
+.status-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  min-height: 1.2em;
+}
+
+.status-label.is-active {
+  color: #fff;
+}
+
+.status-activity {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  color: var(--muted);
+  animation: statusPulse 1.3s ease-in-out infinite;
+}
+
+.status-dots {
+  display: inline-grid;
+  width: 1.6em;
+  overflow: hidden;
+}
+
+.status-dots::before {
+  content: "...";
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+  animation: statusDots 1s steps(4, end) infinite;
+}
+
 .status-row h2 {
   margin: 0 0 6px;
   font-size: clamp(1.35rem, 3vw, 2rem);
@@ -425,6 +457,25 @@ select.input {
   color: var(--muted);
   font-size: 0.82rem;
   line-height: 1.5;
+}
+
+@keyframes statusPulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes statusDots {
+  0% {
+    transform: translateX(-1.18em);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 
 .variant-grid {
@@ -615,5 +666,12 @@ ol.clean {
 
   .inline-fields {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-activity,
+  .status-dots::before {
+    animation: none;
   }
 }
