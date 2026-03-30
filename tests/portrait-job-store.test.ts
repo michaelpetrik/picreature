@@ -1,0 +1,40 @@
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const tempRoot = path.join(os.tmpdir(), `picreature-test-${Date.now()}`);
+vi.mock("@/lib/server/portrait-constants", () => ({
+  JOB_TTL_MS: 1000,
+  JOB_ROOT_DIR: tempRoot,
+}));
+
+const { cleanupExpiredJobs, saveJob } = await import("@/lib/server/portrait-job-store");
+
+describe("cleanupExpiredJobs", () => {
+  afterEach(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  it("removes expired job directories", async () => {
+    const jobId = "job_expired";
+    await saveJob({
+      jobId,
+      status: "completed",
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString(),
+      expiresAt: new Date(0).toISOString(),
+      sourceFileName: "portrait.jpg",
+      sourceMimeType: "image/jpeg",
+      sourcePath: path.join(tempRoot, jobId, "source.jpg"),
+      subjectNote: "",
+      variants: [],
+    });
+
+    await cleanupExpiredJobs(Date.now());
+
+    await expect(
+      fs.access(path.join(tempRoot, jobId)),
+    ).rejects.toThrow();
+  });
+});
