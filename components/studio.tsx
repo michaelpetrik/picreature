@@ -703,7 +703,7 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
             <div className="inline-fields">
               <select
                 id="subject-gender"
-                className="input"
+                className="input gender-select"
                 aria-label="Subject gender"
                 value={form.subjectGender}
                 onChange={(event) =>
