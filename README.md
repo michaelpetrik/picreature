@@ -176,6 +176,23 @@ npm run build
 docker compose build
 ```
 
+## Changelog
+
+`CHANGELOG.md` se generuje z conventional commit message lokálním skriptem.
+
+Použití:
+
+```bash
+npm run changelog
+npm run changelog:check
+```
+
+Poznámky:
+
+- skript ignoruje commity `docs(changelog)`, aby changelog nezačal zapisovat sám sebe
+- bez git tagů vygeneruje první release z aktuální verze v `package.json`
+- s tagy ve formátu `vX.Y.Z` začne oddělovat `Unreleased` a historické releasy automaticky
+
 ## Bezpečnost
 
 - API key používej jen server-side, nikdy ho neposílej do browseru
