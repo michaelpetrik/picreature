@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- add license file (`9c752ac`)
+
 ## [0.1.0] - 2026-03-30
 
 ### Added
@@ -15,3 +18,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - app: scaffold next.js typescript project (`a366cf3`)
 - deploy: add docker packaging and setup docs (`d71c5e1`)
+- changelog: automate conventional commit release notes (`8fba505`)

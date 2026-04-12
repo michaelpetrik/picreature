@@ -2,7 +2,11 @@
 node_modules
 .DS_Store
 .cache
+.gitnexus
 coverage
 *.log
 !.gitkeep
 .env
+.env.local
+.env.*.local
+tsconfig.tsbuildinfo

@@ -28,6 +28,11 @@ describe("cleanupExpiredJobs", () => {
       sourceMimeType: "image/jpeg",
       sourcePath: path.join(tempRoot, jobId, "source.jpg"),
       subjectNote: "",
+      subjectGender: "male",
+      subjectAge: 32,
+      promptTemplate: "prompt",
+      warnings: [],
+      attemptedModels: [],
       variants: [],
     });
 

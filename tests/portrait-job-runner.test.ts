@@ -102,6 +102,7 @@ describe("ensurePortraitJobRunning", () => {
     const sourcePath = path.join(tempRoot, jobId, "source.jpg");
     await fs.mkdir(path.dirname(sourcePath), { recursive: true });
     await fs.writeFile(sourcePath, Buffer.from("source"));
+    let releaseGeneration!: () => void;
 
     await saveJob(
       createEmptyJob({
@@ -119,7 +120,7 @@ describe("ensurePortraitJobRunning", () => {
       generateVariantsMock.mockImplementationOnce(
         () =>
           new Promise((innerResolve) => {
-            releaseGeneration = () =>
+            releaseGeneration = () => {
               innerResolve({
                 warnings: [],
                 selectedModel: {
@@ -129,12 +130,11 @@ describe("ensurePortraitJobRunning", () => {
                 attemptedModels: [],
                 variants: [],
               });
+            };
             resolve();
           }),
       );
     });
-
-    let releaseGeneration: (() => void) | null = null;
 
     const firstRun = ensurePortraitJobRunning(jobId);
     const secondRun = ensurePortraitJobRunning(jobId);
@@ -143,7 +143,7 @@ describe("ensurePortraitJobRunning", () => {
     expect(firstRun).toBe(secondRun);
     expect(generateVariantsMock).toHaveBeenCalledTimes(1);
 
-    releaseGeneration?.();
+    releaseGeneration();
     await firstRun;
   });
 });
