@@ -1,52 +1,67 @@
 schema_version: 1
-updated_at: 2026-04-12T00:20:10Z
+updated_at: "2026-04-14T15:31:00Z"
 discovered_policy_sources:
   - AGENTS.md
   - Dockerfile
   - compose.yaml
   - package.json
   - package-lock.json
-  - CLAUDE.md
+  - CLAUDE.md (symlink -> AGENTS.md)
 claudecode_conventions:
   status: enforced
   policy_source: AGENTS.md
   enforcement_source:
     - AGENTS.md
-    - CLAUDE.md
-  reason: AGENTS.md is canonical and CLAUDE.md is a compat file with exact content @AGENTS.md.
+    - CLAUDE.md (symlink -> AGENTS.md)
+  reason: >
+    AGENTS.md is canonical. CLAUDE.md is now a proper symlink to AGENTS.md.
+    claudecode-conventions skill is referenced as required in AGENTS.md.
 controls:
   - control: gitnexus
     policy_source: AGENTS.md
     enforcement_source:
-      - package.json
+      - package.json (devDependency)
       - scripts/ci/bootstrap_gitnexus.sh
       - scripts/ci/check_gitnexus.sh
-      - .claude/skills/gitnexus/gitnexus-cli/SKILL.md
-      - AGENTS.md
+      - .claude/skills/gitnexus/*
+      - AGENTS.md (GitNexus section)
     status: enforced
-    reason: Repo-owned GitNexus bootstrap and freshness checks are installed locally and verified against the current working tree snapshot.
+    reason: >
+      Repo-owned GitNexus bootstrap and freshness checks are installed locally
+      and verified against the current working tree snapshot.
+
   - control: pinned_toolchain_manifest
     policy_source: AGENTS.md
     enforcement_source:
-      - package.json
-      - .nvmrc
+      - package.json (packageManager: npm@11.6.2, engines.node >=22 <25)
+      - .nvmrc (22)
       - package-lock.json
     status: enforced
-    reason: The repo pins Node via .nvmrc, npm via packageManager, and dependencies via package-lock.json.
+    reason: >
+      The repo pins Node via .nvmrc, npm via packageManager field,
+      and dependencies via package-lock.json.
+
   - control: local_hook_wiring
     policy_source: AGENTS.md
     enforcement_source:
       - .githooks/pre-commit
       - scripts/ci/install_hooks.sh
     status: enforced
-    reason: install_hooks.sh configures core.hooksPath to .githooks and the pre-commit hook delegates to a repo-owned entrypoint.
+    reason: >
+      install_hooks.sh configures core.hooksPath to .githooks and the
+      pre-commit hook delegates to guard:pre-commit entrypoint.
+
   - control: local_quality_gate
     policy_source: AGENTS.md
     enforcement_source:
       - scripts/ci/run_quality_gates.sh
-      - package.json
+      - scripts/ci/run_pre_commit_checks.sh
     status: enforced
-    reason: The local quality gate now verifies GitNexus freshness, typecheck, tests, production build, and changelog consistency.
+    reason: >
+      Quality gate runs GitNexus freshness, typecheck (tsc --noEmit),
+      tests (vitest), production build (next build), and changelog check.
+      Pre-commit runs secrets + typecheck + test.
+
   - control: local_security_review
     policy_source: AGENTS.md
     enforcement_source:
@@ -54,35 +69,82 @@ controls:
       - scripts/ci/check_no_secrets.sh
       - scripts/ci/check_docker_runtime.sh
     status: enforced
-    reason: The repo provides one local security entrypoint covering secret scanning, static dangerous-API checks, dependency audit invocation, and Docker/runtime verification.
+    reason: >
+      Security entrypoint covers secret scanning, dangerous-API pattern
+      detection (eval, child_process, dangerouslySetInnerHTML),
+      dependency audit, and Docker/runtime verification.
+
   - control: dependency_vulnerability_audit
-    policy_source: repo-quality-guardrails skill
+    policy_source: scripts/ci/run_security_review.sh
     enforcement_source:
-      - scripts/ci/run_security_review.sh
+      - scripts/ci/run_security_review.sh (npm audit --omit=dev --audit-level=high)
     status: partial
-    reason: npm audit is wired into the repo, but vulnerability data still depends on the live npm advisory service.
+    reason: >
+      npm audit is wired into the security review with network-failure
+      detection and graceful degradation. Marked partial because it depends
+      on live npm advisory service with no local mirror.
+
   - control: secret_scanning
-    policy_source: repo-quality-guardrails skill
+    policy_source: AGENTS.md
     enforcement_source:
       - scripts/ci/check_no_secrets.sh
     status: enforced
-    reason: The repo now performs diff-aware secret scanning over staged, unstaged, and untracked changed files.
+    reason: >
+      Diff-aware scan checks staged, unstaged, and untracked files for
+      secret-like filenames (.env, .pem, .key) and content patterns
+      (API keys, private keys, GitHub tokens). Runs in both pre-commit
+      and security review.
+
   - control: docker_runtime_checks
-    policy_source: AGENTS.md
+    policy_source: Dockerfile
     enforcement_source:
-      - Dockerfile
-      - compose.yaml
+      - Dockerfile (multi-stage, non-root user)
       - scripts/ci/check_docker_runtime.sh
     status: enforced
-    reason: The repo statically checks the non-root runtime user and verifies container build plus /api/health smoke startup locally.
+    reason: >
+      Verifies Dockerfile has non-root user (nextjs), builds the image,
+      runs the container, and smoke-tests /api/health endpoint.
+
+  - control: formatter
+    policy_source: none
+    enforcement_source: none
+    status: policy-only
+    reason: >
+      No formatter (prettier or similar) is configured. Code formatting
+      is not enforced locally or in any gate.
+
+  - control: linter
+    policy_source: none
+    enforcement_source: none
+    status: policy-only
+    reason: >
+      No linter (eslint or similar) is configured. Static analysis beyond
+      TypeScript type checking is not enforced.
+
   - control: parseable_handoff_artifact
-    policy_source: repo-quality-guardrails skill
+    policy_source: none
     enforcement_source: []
-    status: N/A
-    reason: This repo does not declare split test and implementation authorship.
+    status: "N/A"
+    reason: >
+      This repo does not require split test/implementation authorship.
+      Single-author local tool.
+
 manual_review_obligations:
-  - Review Gemini prompt and outbound API request changes for data leakage or prompt injection risk whenever lib/server/portrait-gemini.ts changes.
-  - Review any future use of eval-like APIs, shell execution, or new auth/storage layers before merge even if automated gates stay green.
-service_dependencies:
-  - npm advisory availability affects dependency_vulnerability_audit and keeps that control partial rather than enforced.
-  - Docker daemon availability is required to execute docker_runtime_checks locally.
+  - area: gemini_api_integration
+    note: >
+      Review Gemini prompt and outbound API request changes for data leakage
+      or prompt injection risk whenever lib/server/portrait-gemini.ts changes.
+  - area: eval_and_subprocess
+    note: >
+      Review any future use of eval-like APIs, shell execution, or new
+      auth/storage layers before merge even if automated gates stay green.
+  - area: outbound_requests
+    note: >
+      Gemini API calls go through @google/genai SDK. API key is server-side
+      only. Manual review needed if new external integrations are added.
+
+network_dependencies:
+  - service: npm_advisory
+    impact: dependency_vulnerability_audit stays partial (no local mirror)
+  - service: docker_daemon
+    impact: docker_runtime_checks requires local Docker daemon
