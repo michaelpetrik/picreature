@@ -27,11 +27,27 @@ type SavedTemplate = {
   createdAt: string;
 };
 
+const EXPRESSION_LABELS = [
+  "serious",
+  "composed",
+  "neutral",
+  "calm",
+  "slight smile",
+  "friendly smile",
+  "warm smile",
+  "big smile",
+  "laughing",
+  "beaming",
+  "joyful laughter",
+] as const;
+
 type FormState = {
   files: File[];
   subjectNote: string;
   subjectGender: SubjectGender;
   subjectAge: number;
+  expression: number;
+  bgColor: string;
   candidateCount: number;
   promptTemplate: string;
 };
@@ -42,6 +58,8 @@ function createInitialForm(preset: PortraitPreset): FormState {
     subjectNote: "",
     subjectGender: "male",
     subjectAge: 32,
+    expression: 4,
+    bgColor: "#2a2a2a",
     candidateCount: preset.candidateCount,
     promptTemplate: preset.defaultPromptTemplate,
   };
@@ -112,8 +130,10 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
   const renderedPromptPreview = useMemo(() => {
     return form.promptTemplate
       .replaceAll("{{subject_gender}}", form.subjectGender)
-      .replaceAll("{{subject_age}}", `${form.subjectAge} years old`);
-  }, [form.promptTemplate, form.subjectAge, form.subjectGender]);
+      .replaceAll("{{subject_age}}", `${form.subjectAge} years old`)
+      .replaceAll("{{expression}}", EXPRESSION_LABELS[form.expression] ?? "neutral")
+      .replaceAll("{{bg_color}}", form.bgColor);
+  }, [form.promptTemplate, form.subjectAge, form.subjectGender, form.expression, form.bgColor]);
 
   const hasReferenceSlots = preset.referenceImagePaths.length > 0;
   const modelChain = [preset.preferredModel, ...preset.fallbackModels];
@@ -613,6 +633,8 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
     body.set("subjectNote", form.subjectNote);
     body.set("subjectGender", form.subjectGender);
     body.set("subjectAge", String(form.subjectAge));
+    body.set("expression", String(form.expression));
+    body.set("bgColor", form.bgColor);
     body.set("candidateCount", String(form.candidateCount));
     body.set("promptTemplate", form.promptTemplate);
 
@@ -910,6 +932,54 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
                       subjectAge: Number(event.target.value),
                     }))
                   }
+                />
+              </div>
+            </div>
+
+            <div className="candidate-control">
+              <label htmlFor="expression">
+                expression <span className="muted-inline">{EXPRESSION_LABELS[form.expression]}</span>
+              </label>
+              <input
+                id="expression"
+                className="range-input"
+                type="range"
+                min="0"
+                max="10"
+                step="1"
+                value={form.expression}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    expression: Number(event.target.value),
+                  }))
+                }
+              />
+            </div>
+
+            <div className="bg-color-control">
+              <label htmlFor="bg-color">
+                background <span className="muted-inline">{form.bgColor}</span>
+              </label>
+              <div className="bg-color-row">
+                <input
+                  type="color"
+                  className="color-picker-input"
+                  value={form.bgColor}
+                  onChange={(e) =>
+                    setForm((current) => ({ ...current, bgColor: e.target.value }))
+                  }
+                  aria-label="Background color"
+                />
+                <input
+                  type="text"
+                  className="input color-hex-input"
+                  value={form.bgColor}
+                  onChange={(e) =>
+                    setForm((current) => ({ ...current, bgColor: e.target.value }))
+                  }
+                  placeholder="#rrggbb"
+                  spellCheck={false}
                 />
               </div>
             </div>

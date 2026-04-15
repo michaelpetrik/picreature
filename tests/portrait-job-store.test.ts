@@ -26,6 +26,8 @@ describe("cleanupExpiredJobs", () => {
       expiresAt: new Date(0).toISOString(),
       sourceFiles: [{ fileName: "portrait.jpg", mimeType: "image/jpeg", path: path.join(tempRoot, jobId, "source.jpg") }],
       candidateCount: 4,
+      expression: 4,
+      bgColor: "#2a2a2a",
       subjectNote: "",
       subjectGender: "male",
       subjectAge: 32,

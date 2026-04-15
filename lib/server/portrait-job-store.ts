@@ -66,6 +66,8 @@ export async function readJob(jobId: string) {
     if (!record.candidateCount) {
       record.candidateCount = portraitPreset.candidateCount;
     }
+    if (record.expression == null) record.expression = 4;
+    if (!record.bgColor) record.bgColor = "#2a2a2a";
 
     return record as PortraitJobRecord;
   } catch (error) {
@@ -105,6 +107,8 @@ export function createEmptyJob(params: {
   jobId: string;
   sourceFiles: Array<{ fileName: string; mimeType: string; path: string }>;
   candidateCount: number;
+  expression: number;
+  bgColor: string;
   subjectNote: string;
   subjectGender: "male" | "female";
   subjectAge: number;
@@ -119,6 +123,8 @@ export function createEmptyJob(params: {
     expiresAt: new Date(Date.now() + JOB_TTL_MS).toISOString(),
     sourceFiles: params.sourceFiles,
     candidateCount: params.candidateCount,
+    expression: params.expression,
+    bgColor: params.bgColor,
     subjectNote: params.subjectNote,
     subjectGender: params.subjectGender,
     subjectAge: params.subjectAge,

@@ -41,6 +41,8 @@ export class GeminiPortraitClient {
   async generateVariants(params: {
     sourceFiles: Array<{ fileName: string; mimeType: string; path: string }>;
     candidateCount: number;
+    expression: number;
+    bgColor: string;
     subjectNote: string;
     subjectGender: SubjectGender;
     subjectAge: number;
@@ -81,6 +83,8 @@ export class GeminiPortraitClient {
               index,
               model: modelOption.apiName,
               sourceParts,
+              expression: params.expression,
+              bgColor: params.bgColor,
               subjectNote: params.subjectNote,
               subjectGender: params.subjectGender,
               subjectAge: params.subjectAge,
@@ -220,6 +224,8 @@ export class GeminiPortraitClient {
     sourceParts: Array<{
       inlineData: { mimeType: string; data: string };
     }>;
+    expression: number;
+    bgColor: string;
     subjectNote: string;
     subjectGender: SubjectGender;
     subjectAge: number;
@@ -230,6 +236,8 @@ export class GeminiPortraitClient {
   }): Promise<GeneratedVariant> {
     const prompt = buildPortraitPrompt({
       variantIndex: params.index,
+      expression: params.expression,
+      bgColor: params.bgColor,
       subjectNote: params.subjectNote,
       subjectGender: params.subjectGender,
       subjectAge: params.subjectAge,
@@ -503,18 +511,38 @@ function extractRetryAfterSeconds(error: unknown) {
   return Number.isFinite(seconds) ? seconds : undefined;
 }
 
+const EXPRESSION_LABELS = [
+  "serious",
+  "composed",
+  "neutral",
+  "calm",
+  "slight smile",
+  "friendly smile",
+  "warm smile",
+  "big smile",
+  "laughing",
+  "beaming",
+  "joyful laughter",
+] as const;
+
 export function renderPromptTemplate(
   promptTemplate: string,
   subjectGender: SubjectGender,
   subjectAge: number,
+  expression = 4,
+  bgColor = "#2a2a2a",
 ) {
   return promptTemplate
     .replaceAll("{{subject_gender}}", subjectGender)
-    .replaceAll("{{subject_age}}", `${subjectAge} years old`);
+    .replaceAll("{{subject_age}}", `${subjectAge} years old`)
+    .replaceAll("{{expression}}", EXPRESSION_LABELS[expression] ?? "neutral")
+    .replaceAll("{{bg_color}}", bgColor);
 }
 
 function buildPortraitPrompt(params: {
   variantIndex: number;
+  expression: number;
+  bgColor: string;
   subjectNote: string;
   subjectGender: SubjectGender;
   subjectAge: number;
@@ -531,6 +559,8 @@ function buildPortraitPrompt(params: {
     params.promptTemplate,
     params.subjectGender,
     params.subjectAge,
+    params.expression,
+    params.bgColor,
   );
 
   const sections = [

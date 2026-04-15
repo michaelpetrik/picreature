@@ -11,6 +11,8 @@ Write a detailed prompt template for Gemini image generation that transforms upl
 TEMPLATE VARIABLES — use exactly as written, they will be substituted at runtime:
 - {{subject_gender}} → "male" or "female"
 - {{subject_age}} → e.g. "41 years old"
+- {{expression}} → facial expression from "serious" to "joyful laughter"
+- {{bg_color}} → background color as hex code e.g. "#2a2a2a"
 
 STRUCTURE YOUR PROMPT TO COVER (in this order):
 1. Subject description — reference the attached photo, use {{subject_gender}} and {{subject_age}}, emphasize identity preservation
@@ -22,12 +24,12 @@ STRUCTURE YOUR PROMPT TO COVER (in this order):
 7. Skin and texture — realistic rendering cues, no over-retouching
 
 GOLDEN EXAMPLE (for calibration — this is the quality bar):
-"A hyper-realistic, high-fidelity professional headshot of the white {{subject_gender}} subject ({{subject_age}}) from the attached reference, strictly maintaining exact facial likeness and identity. The subject is framed in a classic head-and-shoulders portrait against a solid, matte dark charcoal seamless studio background. He is wearing a sharp, dark navy blazer over a simple black t-shirt or turtleneck, projecting a modern clean aesthetic. The lighting is a professional high-contrast studio setup, utilizing a large softbox key light at a 45-degree angle to sculpt the facial features with controlled shadows (Rembrandt style), completely void of natural daylight. A subtle cool-toned rim light separates the subject from the dark background. Shot on a Phase One XF IQ4 with an 85mm f/1.4 portrait lens, capturing razor-sharp focus on the eyes, realistic skin texture, and the fine weave of the fabric in 8k resolution."
+"A hyper-realistic, high-fidelity professional headshot of the white {{subject_gender}} subject ({{subject_age}}) from the attached reference, strictly maintaining exact facial likeness and identity. The subject has a {{expression}} facial expression. The subject is framed in a classic head-and-shoulders portrait against a solid, matte {{bg_color}} seamless studio background. He is wearing a sharp, dark navy blazer over a simple black t-shirt or turtleneck, projecting a modern clean aesthetic. The lighting is a professional high-contrast studio setup, utilizing a large softbox key light at a 45-degree angle to sculpt the facial features with controlled shadows (Rembrandt style), completely void of natural daylight. A subtle cool-toned rim light separates the subject from the dark background. Shot on a Phase One XF IQ4 with an 85mm f/1.4 portrait lens, capturing razor-sharp focus on the eyes, realistic skin texture, and the fine weave of the fabric in 8k resolution."
 
 RULES:
 - Write in English, under 500 words
 - Always start with subject description referencing the attached photo
-- Always include {{subject_gender}} and {{subject_age}} variables
+- Always include {{subject_gender}}, {{subject_age}}, {{expression}}, and {{bg_color}} variables
 - Always mention identity preservation ("strictly maintaining exact facial likeness")
 - Be specific: name camera bodies, lens specs, lighting gear
 - Output ONLY the prompt text — no markdown, no headers, no commentary`;
@@ -39,10 +41,12 @@ Modify the template according to the user's request while preserving its overall
 TEMPLATE VARIABLES — preserve exactly as written:
 - {{subject_gender}} → "male" or "female"
 - {{subject_age}} → e.g. "41 years old"
+- {{expression}} → facial expression from "serious" to "joyful laughter"
+- {{bg_color}} → background color as hex code e.g. "#2a2a2a"
 
 RULES:
 - Keep the template under 500 words
-- Always preserve {{subject_gender}} and {{subject_age}} variables
+- Always preserve all {{...}} template variables
 - Always preserve identity preservation language
 - Maintain the same structural flow: subject → framing → background → wardrobe → lighting → camera → skin
 - Write in English

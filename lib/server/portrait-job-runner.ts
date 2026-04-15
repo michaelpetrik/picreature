@@ -21,6 +21,8 @@ export async function runPortraitJob(jobId: string, apiKey?: string) {
     const result = await client.generateVariants({
       sourceFiles: job.sourceFiles,
       candidateCount: job.candidateCount,
+      expression: job.expression,
+      bgColor: job.bgColor,
       subjectNote: job.subjectNote,
       subjectGender: job.subjectGender,
       subjectAge: job.subjectAge,
