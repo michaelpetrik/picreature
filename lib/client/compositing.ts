@@ -59,7 +59,7 @@ function getSourcePixels(
 }
 
 function featherAlpha(raw: number, feather: number): number {
-  const t = feather * 0.01;
+  const t = feather * 0.1;
   if (t <= 0) return raw > 0.5 ? 1 : 0;
   if (raw <= t) return 0;
   if (raw >= 1 - t) return 1;

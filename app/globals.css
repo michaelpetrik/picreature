@@ -1013,6 +1013,27 @@ ol.clean {
   font-weight: 400;
 }
 
+.feather-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 60px;
+  gap: 10px;
+  align-items: center;
+}
+
+.feather-number {
+  width: 60px;
+  text-align: right;
+  font-size: 0.82rem;
+  border-bottom: 1px solid var(--line) !important;
+  -moz-appearance: textfield;
+}
+
+.feather-number::-webkit-inner-spin-button,
+.feather-number::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 ::selection {
   background: #fff;
   color: #000;

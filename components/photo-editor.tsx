@@ -42,7 +42,7 @@ export function PhotoEditor({ imageUrl, imageName, onClose }: PhotoEditorProps) 
   const [phase, setPhase] = useState<EditorPhase>("loading-model");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [bgColor, setBgColor] = useState("#ffffff");
-  const [feather, setFeather] = useState(2);
+  const [feather, setFeather] = useState(0.20);
 
   const isReady = phase === "ready";
 
@@ -168,20 +168,33 @@ export function PhotoEditor({ imageUrl, imageName, onClose }: PhotoEditorProps) 
             </div>
 
             <div className="field">
-              <label htmlFor="edge-feather">
-                edge softness <span className="muted-inline">{feather}</span>
-              </label>
-              <input
-                id="edge-feather"
-                className="range-input"
-                type="range"
-                min="0"
-                max="20"
-                step="1"
-                value={feather}
-                onChange={(e) => setFeather(Number(e.target.value))}
-                disabled={!isReady}
-              />
+              <label htmlFor="edge-feather">edge softness</label>
+              <div className="feather-control">
+                <input
+                  id="edge-feather"
+                  className="range-input"
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="0.01"
+                  value={feather}
+                  onChange={(e) => setFeather(Number(e.target.value))}
+                  disabled={!isReady}
+                />
+                <input
+                  type="number"
+                  className="input feather-number"
+                  min="0"
+                  max="2"
+                  step="0.01"
+                  value={feather}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (Number.isFinite(v)) setFeather(Math.min(2, Math.max(0, v)));
+                  }}
+                  disabled={!isReady}
+                />
+              </div>
             </div>
 
             <div className="actions">
