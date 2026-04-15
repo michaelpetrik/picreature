@@ -18,6 +18,26 @@ type StudioProps = {
   acceptedImageTypes: string;
 };
 
+const GROUP_PROMPT_TEMPLATE = `A cinematic, hyper-realistic photograph captured in a dimly lit studio environment. {{portrait_count}} modern laptops (different sleek silver and gray models) are lined up perfectly side-by-side on a dark, slightly reflective studio surface, facing the camera directly. The main background is a seamless, moody, deep {{bg_color}} studio backdrop with soft, diffused light falloff, creating an atmospheric dim lighting. The lighting is moody, emphasizing the luminosity of the laptop screens.
+
+Each of the {{portrait_count}} screens is brightly illuminated and displays a high-resolution, professional portrait of a distinct person from the attached references, strictly maintaining exact facial likeness and identity for each person. The subjects have a {{expression}} facial expression. Each portrait background on screen uses a distinct vivid color creating a colorful spectrum across the row.
+
+{{portrait_entries}}
+
+The faces in the portraits are sharp, well-defined, and not grainy video streams. The photograph is shot at eye level with a shallow depth of field, rendering the front edge of the laptops and the keyboards in sharp focus while the far edges and the studio backdrop are softly blurred (bokeh). The focus is critically sharp across all screens. The image displays extreme detail, including subtle textures of the laptop bodies, keyboards, and realistic reflections of the environment on the screens, captured with natural film grain. Full-frame photography, shot on Sony A9, 50mm f/1.8 lens, 8k resolution.`;
+
+const SPECTRUM_COLORS = [
+  "Red", "Orange", "Yellow", "Green", "Cyan/Teal", "Purple/Magenta",
+  "Blue", "Pink", "Lime", "Coral", "Violet", "Gold",
+];
+
+function buildPortraitEntries(count: number): string {
+  return Array.from({ length: count }, (_, i) => {
+    const color = SPECTRUM_COLORS[i % SPECTRUM_COLORS.length];
+    return `Laptop ${i + 1}: Portrait of [Reference ${i + 1}] set against a solid ${color} background within the screen.`;
+  }).join("\n\n");
+}
+
 const POLL_INTERVAL_MS = 2200;
 const ACTIVE_JOB_STORAGE_KEY = "picreature.activeJobId";
 const TEMPLATES_STORAGE_KEY = "picreature.promptTemplates";
@@ -50,8 +70,11 @@ type VarToggles = {
   bg_color: boolean;
 };
 
+type PromptMode = "portrait" | "group";
+
 type FormState = {
   files: File[];
+  promptMode: PromptMode;
   subjectNote: string;
   subjectGender: SubjectGender;
   subjectAge: number;
@@ -65,6 +88,7 @@ type FormState = {
 function createInitialForm(preset: PortraitPreset): FormState {
   return {
     files: [],
+    promptMode: "portrait",
     subjectNote: "",
     subjectGender: "male",
     subjectAge: 32,
@@ -143,6 +167,8 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint, acceptedImageType
   const dragDepth = useRef(0);
   const templateFileRef = useRef<HTMLInputElement>(null);
 
+  const portraitCount = Math.max(1, form.files.length);
+
   const renderedPromptPreview = useMemo(() => {
     const ev = form.enabledVars;
     const v = (key: keyof typeof PROMPT_VAR_DEFAULTS, value: string) =>
@@ -151,8 +177,10 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint, acceptedImageType
       .replaceAll("{{subject_gender}}", v("subject_gender", form.subjectGender))
       .replaceAll("{{subject_age}}", v("subject_age", `${form.subjectAge} years old`))
       .replaceAll("{{expression}}", v("expression", EXPRESSION_LABELS[form.expression] ?? "neutral"))
-      .replaceAll("{{bg_color}}", v("bg_color", form.bgColor));
-  }, [form.promptTemplate, form.subjectAge, form.subjectGender, form.expression, form.bgColor, form.enabledVars]);
+      .replaceAll("{{bg_color}}", v("bg_color", form.bgColor))
+      .replaceAll("{{portrait_count}}", String(portraitCount))
+      .replaceAll("{{portrait_entries}}", buildPortraitEntries(portraitCount));
+  }, [form.promptTemplate, form.subjectAge, form.subjectGender, form.expression, form.bgColor, form.enabledVars, portraitCount]);
 
   const hasReferenceSlots = preset.referenceImagePaths.length > 0;
   const modelChain = [preset.preferredModel, ...preset.fallbackModels];
@@ -857,6 +885,37 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint, acceptedImageType
               <div className="micro">
                 This key stays only in this browser tab memory and is never persisted to disk.
               </div>
+            </div>
+
+            <div className="mode-selector">
+              <button
+                type="button"
+                className={`mode-button${form.promptMode === "portrait" ? " is-active" : ""}`}
+                onClick={() => {
+                  setForm((c) => ({
+                    ...c,
+                    promptMode: "portrait",
+                    promptTemplate: preset.defaultPromptTemplate,
+                  }));
+                  setSelectedTemplateId(null);
+                }}
+              >
+                portrait
+              </button>
+              <button
+                type="button"
+                className={`mode-button${form.promptMode === "group" ? " is-active" : ""}`}
+                onClick={() => {
+                  setForm((c) => ({
+                    ...c,
+                    promptMode: "group",
+                    promptTemplate: GROUP_PROMPT_TEMPLATE,
+                  }));
+                  setSelectedTemplateId(null);
+                }}
+              >
+                group
+              </button>
             </div>
 
             <div

@@ -13,6 +13,8 @@ TEMPLATE VARIABLES — use exactly as written, they will be substituted at runti
 - {{subject_age}} → e.g. "41 years old"
 - {{expression}} → facial expression from "serious" to "joyful laughter"
 - {{bg_color}} → background color as hex code e.g. "#2a2a2a"
+- {{portrait_count}} → number of uploaded source photos (for group shots)
+- {{portrait_entries}} → auto-generated laptop/screen entries for group shots
 
 STRUCTURE YOUR PROMPT TO COVER (in this order):
 1. Subject description — reference the attached photo, use {{subject_gender}} and {{subject_age}}, emphasize identity preservation
