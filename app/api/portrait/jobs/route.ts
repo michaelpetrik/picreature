@@ -7,10 +7,12 @@ import { getErrorInfo, getErrorMessage, PortraitError } from "@/lib/server/portr
 import { schedulePortraitJob } from "@/lib/server/portrait-job-runner";
 import {
   ensureValidUpload,
+  convertToNativeFormat,
   sanitizeFileName,
   createId,
   readRequestApiKey,
 } from "@/lib/server/portrait-utils";
+import { CONVERTIBLE_IMAGE_TYPES } from "@/lib/server/portrait-constants";
 import { getJobDir } from "@/lib/server/portrait-storage";
 import type { SubjectGender } from "@/lib/server/portrait-types";
 
@@ -61,11 +63,20 @@ export async function POST(request: Request) {
     const sourceFiles: Array<{ fileName: string; mimeType: string; path: string }> = [];
     for (let i = 0; i < images.length; i++) {
       const image = images[i];
-      const fileName = sanitizeFileName(image.name);
+      let buffer: Buffer<ArrayBuffer> = Buffer.from(await image.arrayBuffer());
+      let mimeType = image.type;
+      let fileName = sanitizeFileName(image.name);
+
+      if (CONVERTIBLE_IMAGE_TYPES.has(image.type)) {
+        const converted = await convertToNativeFormat(buffer, image.type);
+        buffer = Buffer.from(converted.buffer);
+        mimeType = converted.mimeType;
+        fileName = fileName.replace(/\.[^.]+$/, converted.extension);
+      }
+
       const sourcePath = path.join(jobDir, `source-${i}-${fileName}`);
-      const buffer = Buffer.from(await image.arrayBuffer());
       await writeFileBuffer(sourcePath, buffer);
-      sourceFiles.push({ fileName: image.name, mimeType: image.type, path: sourcePath });
+      sourceFiles.push({ fileName, mimeType, path: sourcePath });
     }
 
     const job = createEmptyJob({

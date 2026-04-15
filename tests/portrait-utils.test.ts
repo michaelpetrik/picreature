@@ -18,8 +18,8 @@ const { ensureValidUpload } = await import("@/lib/server/portrait-utils");
 
 describe("ensureValidUpload", () => {
   it("rejects unsupported mime type", async () => {
-    const file = new File([Buffer.from("abc")], "portrait.gif", {
-      type: "image/gif",
+    const file = new File([Buffer.from("abc")], "portrait.svg", {
+      type: "image/svg+xml",
     });
 
     await expect(ensureValidUpload(file)).rejects.toBeInstanceOf(PortraitError);

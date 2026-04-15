@@ -31,12 +31,14 @@
     "next": "^16.2.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "sharp": "^0.34.5",
     "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/node": "^24.10.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
+    "@types/sharp": "^0.31.1",
     "gitnexus": "^1.5.3",
     "typescript": "^6.0.2",
     "vitest": "^3.2.4"
