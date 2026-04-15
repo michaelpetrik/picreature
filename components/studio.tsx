@@ -18,6 +18,14 @@ type StudioProps = {
 
 const POLL_INTERVAL_MS = 2200;
 const ACTIVE_JOB_STORAGE_KEY = "picreature.activeJobId";
+const TEMPLATES_STORAGE_KEY = "picreature.promptTemplates";
+
+type SavedTemplate = {
+  id: string;
+  name: string;
+  content: string;
+  createdAt: string;
+};
 
 type FormState = {
   files: File[];
@@ -93,8 +101,13 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [inputPreviewUrls, setInputPreviewUrls] = useState<string[]>([]);
   const [editTarget, setEditTarget] = useState<{ url: string; name: string } | null>(null);
+  const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [aiInput, setAiInput] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
   const pollTimer = useRef<number | null>(null);
   const dragDepth = useRef(0);
+  const templateFileRef = useRef<HTMLInputElement>(null);
 
   const renderedPromptPreview = useMemo(() => {
     return form.promptTemplate
@@ -118,6 +131,125 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
     return {
       "x-gemini-api-key": sessionApiKey.trim(),
     };
+  }
+
+  // --- Template management ---
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = window.localStorage.getItem(TEMPLATES_STORAGE_KEY);
+    if (raw) {
+      try { setSavedTemplates(JSON.parse(raw)); } catch { /* ignore */ }
+    }
+  }, []);
+
+  function persistTemplates(templates: SavedTemplate[]) {
+    setSavedTemplates(templates);
+    window.localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
+  }
+
+  function handleSaveTemplate() {
+    const name = window.prompt("Template name:", "My Template");
+    if (!name?.trim()) return;
+    const id = `tpl_${Date.now()}`;
+    const next = [...savedTemplates, { id, name: name.trim(), content: form.promptTemplate, createdAt: new Date().toISOString() }];
+    persistTemplates(next);
+    setSelectedTemplateId(id);
+  }
+
+  function handleUpdateTemplate() {
+    if (!selectedTemplateId) { handleSaveTemplate(); return; }
+    const next = savedTemplates.map((t) =>
+      t.id === selectedTemplateId ? { ...t, content: form.promptTemplate } : t,
+    );
+    persistTemplates(next);
+  }
+
+  function handleDeleteTemplate() {
+    if (!selectedTemplateId) return;
+    const next = savedTemplates.filter((t) => t.id !== selectedTemplateId);
+    persistTemplates(next);
+    setSelectedTemplateId(null);
+  }
+
+  function handleSelectTemplate(id: string) {
+    if (id === "__default__") {
+      setSelectedTemplateId(null);
+      setForm((c) => ({ ...c, promptTemplate: preset.defaultPromptTemplate }));
+      return;
+    }
+    const tpl = savedTemplates.find((t) => t.id === id);
+    if (tpl) {
+      setSelectedTemplateId(id);
+      setForm((c) => ({ ...c, promptTemplate: tpl.content }));
+    }
+  }
+
+  function handleExportTemplate() {
+    const name = savedTemplates.find((t) => t.id === selectedTemplateId)?.name ?? "template";
+    const content = `---\nname: ${name}\n---\n\n${form.promptTemplate}`;
+    const blob = new Blob([content], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${name.replace(/[^a-zA-Z0-9-_]/g, "-")}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleImportTemplate(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      let text = reader.result as string;
+      let name = file.name.replace(/\.md$/i, "");
+
+      // Parse frontmatter
+      const match = text.match(/^---\s*\n([\s\S]*?)\n---\s*\n/);
+      if (match) {
+        const frontmatter = match[1];
+        const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
+        if (nameMatch) name = nameMatch[1].trim();
+        text = text.slice(match[0].length).trim();
+      }
+
+      const id = `tpl_${Date.now()}`;
+      const next = [...savedTemplates, { id, name, content: text, createdAt: new Date().toISOString() }];
+      persistTemplates(next);
+      setSelectedTemplateId(id);
+      setForm((c) => ({ ...c, promptTemplate: text }));
+    };
+    reader.readAsText(file);
+  }
+
+  async function handleAiGenerate(mode: "generate" | "refine") {
+    if (!aiInput.trim() || aiGenerating) return;
+    setAiGenerating(true);
+    try {
+      const response = await fetch("/api/prompt/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...createAuthHeaders(),
+        },
+        body: JSON.stringify({
+          mode,
+          userInput: aiInput.trim(),
+          currentTemplate: mode === "refine" ? form.promptTemplate : undefined,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error ?? "AI prompt generation failed.");
+        return;
+      }
+      setForm((c) => ({ ...c, promptTemplate: data.template }));
+      setAiInput("");
+      setSelectedTemplateId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "AI prompt generation failed.");
+    } finally {
+      setAiGenerating(false);
+    }
   }
 
   async function fetchJob(jobId: string): Promise<PortraitJobResponse | null> {
@@ -816,25 +948,105 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
               }
             />
 
-            <textarea
-              id="prompt-template"
-              className="textarea prompt-field"
-              placeholder="prompt"
-              value={form.promptTemplate}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  promptTemplate: event.target.value,
-                }))
-              }
-            />
+            <div className="template-section">
+              <div className="template-selector">
+                <select
+                  className="input gender-select"
+                  value={selectedTemplateId ?? "__default__"}
+                  onChange={(e) => handleSelectTemplate(e.target.value)}
+                >
+                  <option value="__default__">Brand Portrait V1 (default)</option>
+                  {savedTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                <div className="template-actions">
+                  <button className="ghost-button text-button" type="button" onClick={handleUpdateTemplate}>
+                    save
+                  </button>
+                  <button className="ghost-button text-button" type="button" onClick={handleSaveTemplate}>
+                    save as
+                  </button>
+                  {selectedTemplateId ? (
+                    <button className="ghost-button text-button" type="button" onClick={handleDeleteTemplate}>
+                      delete
+                    </button>
+                  ) : null}
+                  <button className="ghost-button text-button" type="button" onClick={handleExportTemplate}>
+                    export
+                  </button>
+                  <button className="ghost-button text-button" type="button" onClick={() => templateFileRef.current?.click()}>
+                    import
+                  </button>
+                  <input
+                    ref={templateFileRef}
+                    type="file"
+                    accept=".md,.txt"
+                    className="hidden-input"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImportTemplate(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+              </div>
 
-            <textarea
-              id="prompt-preview"
-              className="textarea prompt-field preview-field"
-              value={renderedPromptPreview}
-              readOnly
-            />
+              <div className="ai-prompt-bar">
+                <input
+                  type="text"
+                  className="input ai-input"
+                  placeholder="describe what you want..."
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void handleAiGenerate("generate");
+                    }
+                  }}
+                  disabled={aiGenerating}
+                />
+                <div className="ai-actions">
+                  <button
+                    className="ghost-button text-button"
+                    type="button"
+                    onClick={() => handleAiGenerate("generate")}
+                    disabled={!aiInput.trim() || aiGenerating}
+                  >
+                    {aiGenerating ? "generating" : "generate"}
+                  </button>
+                  <button
+                    className="ghost-button text-button"
+                    type="button"
+                    onClick={() => handleAiGenerate("refine")}
+                    disabled={!aiInput.trim() || aiGenerating}
+                  >
+                    refine
+                  </button>
+                </div>
+              </div>
+
+              <textarea
+                id="prompt-template"
+                className="textarea prompt-field"
+                placeholder="prompt"
+                value={form.promptTemplate}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    promptTemplate: event.target.value,
+                  }))
+                }
+              />
+
+              <textarea
+                id="prompt-preview"
+                className="textarea prompt-field preview-field"
+                value={renderedPromptPreview}
+                readOnly
+              />
+            </div>
 
             {error ? <div className="error-block"><div className="error">{error}</div></div> : null}
             {!hasReferenceSlots ? <div className="warning">no references</div> : null}
