@@ -15,6 +15,7 @@ type StudioProps = {
   preset: PortraitPreset;
   hasGeminiApiKey: boolean;
   envFileHint: string;
+  acceptedImageTypes: string;
 };
 
 const POLL_INTERVAL_MS = 2200;
@@ -122,7 +123,7 @@ function ErrorActions({
   );
 }
 
-export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
+export function Studio({ preset, hasGeminiApiKey, envFileHint, acceptedImageTypes }: StudioProps) {
   const [form, setForm] = useState<FormState>(() => createInitialForm(preset));
   const [sessionApiKey, setSessionApiKey] = useState("");
   const [job, setJob] = useState<PortraitJobResponse | null>(null);
@@ -868,7 +869,7 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
                 id="image"
                 className="file-input"
                 type="file"
-                accept="image/png,image/jpeg,image/webp"
+                accept={acceptedImageTypes}
                 aria-label="Input image"
                 multiple
                 onChange={(event) => addFiles(Array.from(event.target.files ?? []))}
