@@ -86,6 +86,12 @@
   - safe re-scheduling of unfinished jobs
   - deduplication so the same job is not generated twice concurrently
 
+## Refactoring Plan
+
+- Aktuální refactoring checklist je v [`docs/refactoring-plan.md`](docs/refactoring-plan.md).
+- Před implementací libovolného bodu z plánu si přečti celý dokument pro kontext.
+- Po dokončení bodu zaškrtni příslušný checkbox v checklistu.
+
 ## Editing Guidance
 
 - Keep the single-studio workflow simple; this repo currently assumes one primary UI at `/`.
@@ -107,7 +113,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **picreature** (214 symbols, 536 relationships, 20 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **picreature** (249 symbols, 569 relationships, 20 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

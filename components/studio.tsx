@@ -8,6 +8,7 @@ import type {
   PortraitVariantSummary,
   SubjectGender,
 } from "@/lib/server/portrait-types";
+import { PhotoEditor } from "@/components/photo-editor";
 
 type StudioProps = {
   preset: PortraitPreset;
@@ -89,6 +90,7 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
   const [selfCheckLoading, setSelfCheckLoading] = useState(true);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [inputPreviewUrl, setInputPreviewUrl] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<{ url: string; name: string } | null>(null);
   const pollTimer = useRef<number | null>(null);
   const dragDepth = useRef(0);
 
@@ -697,6 +699,18 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
             {inputPreviewUrl ? (
               <div className="input-preview">
                 <img src={inputPreviewUrl} alt="Input preview" />
+                <button
+                  className="link-button input-edit-button"
+                  type="button"
+                  onClick={() =>
+                    setEditTarget({
+                      url: inputPreviewUrl,
+                      name: form.file?.name ?? "input",
+                    })
+                  }
+                >
+                  Edit
+                </button>
               </div>
             ) : null}
 
@@ -835,12 +849,25 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
           {job?.variants.length ? (
             <div className="variant-grid">
               {job.variants.map((variant, index) => (
-                <VariantCard key={variant.id} index={index} variant={variant} />
+                <VariantCard
+                  key={variant.id}
+                  index={index}
+                  variant={variant}
+                  onEdit={() => setEditTarget({ url: variant.previewUrl, name: `candidate-${variant.id}` })}
+                />
               ))}
             </div>
           ) : (
             <div className="empty-state">no output</div>
           )}
+
+          {editTarget ? (
+            <PhotoEditor
+              imageUrl={editTarget.url}
+              imageName={editTarget.name}
+              onClose={() => setEditTarget(null)}
+            />
+          ) : null}
         </section>
       </section>
     </main>
@@ -850,9 +877,11 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
 function VariantCard({
   index,
   variant,
+  onEdit,
 }: {
   index: number;
   variant: PortraitVariantSummary;
+  onEdit: () => void;
 }) {
   return (
     <article className="variant-card">
@@ -878,6 +907,9 @@ function VariantCard({
           <a className="link-button" href={variant.downloadUrl} download>
             Download
           </a>
+          <button className="link-button" type="button" onClick={onEdit}>
+            Edit
+          </button>
         </div>
       </div>
     </article>

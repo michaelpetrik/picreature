@@ -200,10 +200,22 @@ textarea {
 }
 
 .input-preview {
+  position: relative;
   width: 100%;
   aspect-ratio: 4 / 5;
   overflow: hidden;
   background: #050505;
+}
+
+.input-edit-button {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  border-bottom: 0;
+  border-top: 1px solid var(--line-strong);
+  background: rgba(0, 0, 0, 0.72);
+  padding: 8px 14px;
+  font-size: 0.82rem;
 }
 
 .input-preview img {
@@ -674,6 +686,112 @@ ol.clean {
   text-decoration: underline;
 }
 
+/* Photo Editor */
+
+.editor-panel {
+  width: min(1100px, 100%);
+}
+
+.editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 28px;
+  align-items: start;
+}
+
+.editor-canvas-wrap {
+  position: relative;
+  min-height: 300px;
+  display: grid;
+  place-items: center;
+  background: #050505;
+}
+
+.editor-canvas {
+  width: 100%;
+  height: auto;
+  max-height: calc(100vh - 200px);
+  object-fit: contain;
+}
+
+.editor-status {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.editor-controls {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+}
+
+.color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.color-swatch {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  padding: 0;
+  cursor: pointer;
+  transition: border-color 140ms ease, transform 100ms ease;
+}
+
+.color-swatch:hover {
+  border-color: var(--line-strong);
+  transform: scale(1.1);
+}
+
+.color-swatch.is-active {
+  border-color: #fff;
+  box-shadow: 0 0 0 1px #fff;
+}
+
+.color-swatch:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.custom-color-row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.color-picker-input {
+  width: 38px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: transparent;
+  cursor: pointer;
+}
+
+.color-picker-input::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.color-picker-input::-webkit-color-swatch {
+  border: none;
+}
+
+.color-hex-input {
+  font-size: 0.86rem;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--line) !important;
+}
+
+.muted-inline {
+  color: var(--muted);
+  font-weight: 400;
+}
+
 ::selection {
   background: #fff;
   color: #000;
@@ -696,6 +814,10 @@ ol.clean {
   }
 
   .inline-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-layout {
     grid-template-columns: 1fr;
   }
 }
