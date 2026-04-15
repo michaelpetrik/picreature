@@ -247,26 +247,12 @@ textarea {
 
 .candidate-control {
   display: grid;
-  gap: 8px;
-}
-
-.candidate-control label {
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--muted);
+  gap: 6px;
 }
 
 .bg-color-control {
   display: grid;
-  gap: 8px;
-}
-
-.bg-color-control label {
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--muted);
+  gap: 6px;
 }
 
 .bg-color-row {
@@ -322,41 +308,68 @@ textarea {
 .var-toggle-wrap {
   display: grid;
   gap: 6px;
+  min-width: 0;
 }
 
 .var-toggle-wrap.is-disabled {
-  opacity: 0.4;
+  opacity: 0.35;
+}
+
+.var-toggle-wrap.is-disabled .range-input,
+.var-toggle-wrap.is-disabled .gender-select,
+.var-toggle-wrap.is-disabled .color-picker-input,
+.var-toggle-wrap.is-disabled .color-hex-input {
+  pointer-events: none;
 }
 
 .var-toggle-header {
   display: flex;
   align-items: center;
+  min-height: 20px;
 }
 
 .var-toggle-label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
-  font-size: 0.86rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--muted);
+  user-select: none;
 }
 
 .var-toggle-check {
-  width: 14px;
-  height: 14px;
+  appearance: none;
+  width: 12px;
+  height: 12px;
   margin: 0;
-  accent-color: #fff;
+  border: 1px solid var(--line-strong);
+  background: transparent;
   cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.var-toggle-check:checked {
+  border-color: #fff;
+  background: #fff;
+}
+
+.var-toggle-check:checked::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  background: #000;
 }
 
 .var-toggle-code {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: var(--line-strong);
   letter-spacing: 0;
   text-transform: none;
+  opacity: 0.7;
 }
 
 .input-preview img {
@@ -471,7 +484,7 @@ select.input {
   display: grid;
   grid-template-columns: 160px minmax(0, 1fr);
   gap: 16px;
-  align-items: end;
+  align-items: start;
 }
 
 .age-control {

@@ -969,15 +969,12 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
             </div>
 
             <VarToggle
-              label="expression"
+              label={`expression — ${EXPRESSION_LABELS[form.expression]}`}
               varName="expression"
               enabled={form.enabledVars.expression}
               onToggle={(v) => setForm((c) => ({ ...c, enabledVars: { ...c.enabledVars, expression: v } }))}
             >
               <div className="candidate-control">
-                <label htmlFor="expression">
-                  <span className="muted-inline">{EXPRESSION_LABELS[form.expression]}</span>
-                </label>
                 <input
                   id="expression"
                   className="range-input"
@@ -998,15 +995,12 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
             </VarToggle>
 
             <VarToggle
-              label="background"
+              label={`background — ${form.bgColor}`}
               varName="bg_color"
               enabled={form.enabledVars.bg_color}
               onToggle={(v) => setForm((c) => ({ ...c, enabledVars: { ...c.enabledVars, bg_color: v } }))}
             >
               <div className="bg-color-control">
-                <label htmlFor="bg-color">
-                  <span className="muted-inline">{form.bgColor}</span>
-                </label>
                 <div className="bg-color-row">
                   <input
                     type="color"
