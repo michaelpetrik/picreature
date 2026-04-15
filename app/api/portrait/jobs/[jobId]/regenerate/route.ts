@@ -42,6 +42,7 @@ export async function POST(request: Request, context: Context) {
       jobId: nextJobId,
       sourceFiles: nextSourceFiles,
       candidateCount: previousJob.candidateCount,
+      aspectRatio: previousJob.aspectRatio,
       expression: previousJob.expression,
       bgColor: previousJob.bgColor,
       enabledVars: previousJob.enabledVars,

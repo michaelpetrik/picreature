@@ -262,6 +262,100 @@ textarea {
   align-items: center;
 }
 
+/* Aspect Ratio Selector */
+
+.aspect-ratio-section {
+  border: 1px solid var(--line);
+  padding: 0;
+}
+
+.aspect-ratio-summary {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  user-select: none;
+  list-style: none;
+}
+
+.aspect-ratio-summary::-webkit-details-marker {
+  display: none;
+}
+
+.aspect-ratio-summary::before {
+  content: "+";
+  margin-right: 8px;
+  color: var(--line-strong);
+}
+
+details[open].aspect-ratio-section > .aspect-ratio-summary::before {
+  content: "-";
+}
+
+.aspect-ratio-grid {
+  display: grid;
+  gap: 12px;
+  padding: 0 14px 14px;
+}
+
+.aspect-ratio-group {
+  display: grid;
+  gap: 4px;
+}
+
+.aspect-ratio-group-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--line-strong);
+  padding-bottom: 2px;
+}
+
+.aspect-ratio-chip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  transition: color 140ms ease;
+}
+
+.aspect-ratio-chip:hover {
+  color: #fff;
+}
+
+.aspect-ratio-chip.is-active {
+  color: #fff;
+}
+
+.aspect-ratio-value {
+  font-size: 0.74rem;
+  color: var(--line-strong);
+}
+
+.aspect-ratio-chip.is-active .aspect-ratio-value {
+  color: var(--muted);
+}
+
+.aspect-ratio-custom {
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+}
+
+.aspect-ratio-custom .input {
+  font-size: 0.82rem;
+  border-bottom: 1px solid var(--line) !important;
+}
+
 .mode-selector {
   display: flex;
   gap: 0;

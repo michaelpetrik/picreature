@@ -42,6 +42,7 @@ export class GeminiPortraitClient {
   async generateVariants(params: {
     sourceFiles: Array<{ fileName: string; mimeType: string; path: string }>;
     candidateCount: number;
+    aspectRatio: string;
     expression: number;
     bgColor: string;
     enabledVars: Record<string, boolean>;
@@ -85,6 +86,7 @@ export class GeminiPortraitClient {
               index,
               model: modelOption.apiName,
               sourceParts,
+              aspectRatio: params.aspectRatio,
               expression: params.expression,
               bgColor: params.bgColor,
               enabledVars: params.enabledVars,
@@ -228,6 +230,7 @@ export class GeminiPortraitClient {
     sourceParts: Array<{
       inlineData: { mimeType: string; data: string };
     }>;
+    aspectRatio: string;
     expression: number;
     bgColor: string;
     enabledVars: Record<string, boolean>;
@@ -261,7 +264,7 @@ export class GeminiPortraitClient {
       ],
       config: {
         responseModalities: ["TEXT", "IMAGE"],
-        imageConfig: buildImageConfig(params.model),
+        imageConfig: buildImageConfig(params.model, params.aspectRatio),
       },
     });
 
@@ -324,16 +327,16 @@ async function loadReferenceParts() {
   return { parts, missingFiles };
 }
 
-function buildImageConfig(model: string) {
+function buildImageConfig(model: string, aspectRatio: string) {
   if (model === "gemini-3-pro-image-preview" || model === "gemini-3.1-flash-image-preview") {
     return {
-      aspectRatio: portraitPreset.aspectRatio,
+      aspectRatio,
       imageSize: "2K",
     };
   }
 
   return {
-    aspectRatio: portraitPreset.aspectRatio,
+    aspectRatio,
   };
 }
 

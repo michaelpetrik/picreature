@@ -70,11 +70,43 @@ type VarToggles = {
   bg_color: boolean;
 };
 
+type AspectRatioPreset = {
+  label: string;
+  ratio: string;
+  group: string;
+};
+
+const ASPECT_RATIO_PRESETS: AspectRatioPreset[] = [
+  // General
+  { label: "Portrait (4:5)", ratio: "4:5", group: "General" },
+  { label: "Portrait (3:4)", ratio: "3:4", group: "General" },
+  { label: "Square (1:1)", ratio: "1:1", group: "General" },
+  { label: "Landscape (16:9)", ratio: "16:9", group: "General" },
+  { label: "Story / Reel (9:16)", ratio: "9:16", group: "General" },
+  // LinkedIn
+  { label: "LinkedIn Post", ratio: "1.91:1", group: "LinkedIn" },
+  { label: "LinkedIn Cover", ratio: "4:1", group: "LinkedIn" },
+  { label: "LinkedIn Carousel", ratio: "1:1", group: "LinkedIn" },
+  // Instagram
+  { label: "Instagram Feed", ratio: "4:5", group: "Instagram" },
+  { label: "Instagram Story", ratio: "9:16", group: "Instagram" },
+  // Facebook
+  { label: "Facebook Post", ratio: "1.91:1", group: "Facebook" },
+  { label: "Facebook Cover", ratio: "2.63:1", group: "Facebook" },
+  // X (Twitter)
+  { label: "X Post", ratio: "16:9", group: "X" },
+  { label: "X Header", ratio: "3:1", group: "X" },
+  // YouTube
+  { label: "YouTube Thumbnail", ratio: "16:9", group: "YouTube" },
+  { label: "YouTube Banner", ratio: "16:9", group: "YouTube" },
+];
+
 type PromptMode = "portrait" | "group";
 
 type FormState = {
   files: File[];
   promptMode: PromptMode;
+  aspectRatio: string;
   subjectNote: string;
   subjectGender: SubjectGender;
   subjectAge: number;
@@ -89,6 +121,7 @@ function createInitialForm(preset: PortraitPreset): FormState {
   return {
     files: [],
     promptMode: "portrait",
+    aspectRatio: preset.aspectRatio,
     subjectNote: "",
     subjectGender: "male",
     subjectAge: 32,
@@ -682,6 +715,7 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint, acceptedImageType
     body.set("subjectAge", String(form.subjectAge));
     body.set("expression", String(form.expression));
     body.set("bgColor", form.bgColor);
+    body.set("aspectRatio", form.aspectRatio);
     body.set("candidateCount", String(form.candidateCount));
     body.set("enabledVars", JSON.stringify(form.enabledVars));
     body.set("promptTemplate", form.promptTemplate);
@@ -1089,6 +1123,47 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint, acceptedImageType
                 </div>
               </div>
             </VarToggle>
+
+            <details className="aspect-ratio-section">
+              <summary className="aspect-ratio-summary">
+                aspect ratio <span className="muted-inline">{form.aspectRatio}</span>
+              </summary>
+              <div className="aspect-ratio-grid">
+                {(() => {
+                  const groups = new Map<string, AspectRatioPreset[]>();
+                  for (const p of ASPECT_RATIO_PRESETS) {
+                    if (!groups.has(p.group)) groups.set(p.group, []);
+                    groups.get(p.group)!.push(p);
+                  }
+                  return Array.from(groups, ([group, presets]) => (
+                    <div key={group} className="aspect-ratio-group">
+                      <div className="aspect-ratio-group-label">{group}</div>
+                      {presets.map((p) => (
+                        <button
+                          key={`${p.group}-${p.label}`}
+                          type="button"
+                          className={`aspect-ratio-chip${form.aspectRatio === p.ratio ? " is-active" : ""}`}
+                          onClick={() => setForm((c) => ({ ...c, aspectRatio: p.ratio }))}
+                        >
+                          <span>{p.label}</span>
+                          <span className="aspect-ratio-value">{p.ratio}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ));
+                })()}
+              </div>
+              <div className="aspect-ratio-custom">
+                <input
+                  type="text"
+                  className="input"
+                  value={form.aspectRatio}
+                  onChange={(e) => setForm((c) => ({ ...c, aspectRatio: e.target.value }))}
+                  placeholder="e.g. 4:5"
+                  spellCheck={false}
+                />
+              </div>
+            </details>
 
             <div className="candidate-control">
               <label htmlFor="candidate-count">

@@ -33,6 +33,7 @@ export async function POST(request: Request) {
     const subjectGender = String(formData.get("subjectGender") ?? "male") as SubjectGender;
     const subjectAge = Number(formData.get("subjectAge") ?? 32);
     const candidateCount = Math.min(8, Math.max(1, Number(formData.get("candidateCount") ?? portraitPreset.candidateCount)));
+    const aspectRatio = String(formData.get("aspectRatio") ?? portraitPreset.aspectRatio);
     const expression = Math.min(10, Math.max(0, Number(formData.get("expression") ?? 4)));
     const bgColor = String(formData.get("bgColor") ?? "#2a2a2a");
     let enabledVars: Record<string, boolean> = { subject_gender: true, subject_age: true, expression: true, bg_color: true };
@@ -83,6 +84,7 @@ export async function POST(request: Request) {
       jobId,
       sourceFiles,
       candidateCount,
+      aspectRatio,
       expression,
       bgColor,
       enabledVars,

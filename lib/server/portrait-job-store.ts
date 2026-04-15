@@ -66,6 +66,7 @@ export async function readJob(jobId: string) {
     if (!record.candidateCount) {
       record.candidateCount = portraitPreset.candidateCount;
     }
+    if (!record.aspectRatio) record.aspectRatio = portraitPreset.aspectRatio;
     if (record.expression == null) record.expression = 4;
     if (!record.bgColor) record.bgColor = "#2a2a2a";
     if (!record.enabledVars) record.enabledVars = { subject_gender: true, subject_age: true, expression: true, bg_color: true };
@@ -108,6 +109,7 @@ export function createEmptyJob(params: {
   jobId: string;
   sourceFiles: Array<{ fileName: string; mimeType: string; path: string }>;
   candidateCount: number;
+  aspectRatio: string;
   expression: number;
   bgColor: string;
   enabledVars: Record<string, boolean>;
@@ -125,6 +127,7 @@ export function createEmptyJob(params: {
     expiresAt: new Date(Date.now() + JOB_TTL_MS).toISOString(),
     sourceFiles: params.sourceFiles,
     candidateCount: params.candidateCount,
+    aspectRatio: params.aspectRatio,
     expression: params.expression,
     bgColor: params.bgColor,
     enabledVars: params.enabledVars,
