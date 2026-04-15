@@ -41,6 +41,13 @@ const EXPRESSION_LABELS = [
   "joyful laughter",
 ] as const;
 
+type VarToggles = {
+  subject_gender: boolean;
+  subject_age: boolean;
+  expression: boolean;
+  bg_color: boolean;
+};
+
 type FormState = {
   files: File[];
   subjectNote: string;
@@ -50,6 +57,7 @@ type FormState = {
   bgColor: string;
   candidateCount: number;
   promptTemplate: string;
+  enabledVars: VarToggles;
 };
 
 function createInitialForm(preset: PortraitPreset): FormState {
@@ -62,6 +70,12 @@ function createInitialForm(preset: PortraitPreset): FormState {
     bgColor: "#2a2a2a",
     candidateCount: preset.candidateCount,
     promptTemplate: preset.defaultPromptTemplate,
+    enabledVars: {
+      subject_gender: true,
+      subject_age: true,
+      expression: true,
+      bg_color: true,
+    },
   };
 }
 
@@ -128,12 +142,13 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
   const templateFileRef = useRef<HTMLInputElement>(null);
 
   const renderedPromptPreview = useMemo(() => {
+    const v = form.enabledVars;
     return form.promptTemplate
-      .replaceAll("{{subject_gender}}", form.subjectGender)
-      .replaceAll("{{subject_age}}", `${form.subjectAge} years old`)
-      .replaceAll("{{expression}}", EXPRESSION_LABELS[form.expression] ?? "neutral")
-      .replaceAll("{{bg_color}}", form.bgColor);
-  }, [form.promptTemplate, form.subjectAge, form.subjectGender, form.expression, form.bgColor]);
+      .replaceAll("{{subject_gender}}", v.subject_gender ? form.subjectGender : "")
+      .replaceAll("{{subject_age}}", v.subject_age ? `${form.subjectAge} years old` : "")
+      .replaceAll("{{expression}}", v.expression ? (EXPRESSION_LABELS[form.expression] ?? "neutral") : "")
+      .replaceAll("{{bg_color}}", v.bg_color ? form.bgColor : "");
+  }, [form.promptTemplate, form.subjectAge, form.subjectGender, form.expression, form.bgColor, form.enabledVars]);
 
   const hasReferenceSlots = preset.referenceImagePaths.length > 0;
   const modelChain = [preset.preferredModel, ...preset.fallbackModels];
@@ -636,6 +651,7 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
     body.set("expression", String(form.expression));
     body.set("bgColor", form.bgColor);
     body.set("candidateCount", String(form.candidateCount));
+    body.set("enabledVars", JSON.stringify(form.enabledVars));
     body.set("promptTemplate", form.promptTemplate);
 
     try {
@@ -899,90 +915,123 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
             ) : null}
 
             <div className="inline-fields">
-              <select
-                id="subject-gender"
-                className="input gender-select"
-                aria-label="Subject gender"
-                value={form.subjectGender}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    subjectGender: event.target.value as SubjectGender,
-                  }))
-                }
+              <VarToggle
+                label="gender"
+                varName="subject_gender"
+                enabled={form.enabledVars.subject_gender}
+                onToggle={(v) => setForm((c) => ({ ...c, enabledVars: { ...c.enabledVars, subject_gender: v } }))}
               >
-                <option value="male">male</option>
-                <option value="female">female</option>
-              </select>
-
-              <div className="age-control">
-                <span>{form.subjectAge}</span>
-                <input
-                  id="subject-age"
-                  className="range-input"
-                  type="range"
-                  min="18"
-                  max="80"
-                  step="1"
-                  aria-label="Subject age"
-                  value={form.subjectAge}
+                <select
+                  id="subject-gender"
+                  className="input gender-select"
+                  aria-label="Subject gender"
+                  value={form.subjectGender}
+                  disabled={!form.enabledVars.subject_gender}
                   onChange={(event) =>
                     setForm((current) => ({
                       ...current,
-                      subjectAge: Number(event.target.value),
+                      subjectGender: event.target.value as SubjectGender,
+                    }))
+                  }
+                >
+                  <option value="male">male</option>
+                  <option value="female">female</option>
+                </select>
+              </VarToggle>
+
+              <VarToggle
+                label="age"
+                varName="subject_age"
+                enabled={form.enabledVars.subject_age}
+                onToggle={(v) => setForm((c) => ({ ...c, enabledVars: { ...c.enabledVars, subject_age: v } }))}
+              >
+                <div className="age-control">
+                  <span>{form.subjectAge}</span>
+                  <input
+                    id="subject-age"
+                    className="range-input"
+                    type="range"
+                    min="18"
+                    max="80"
+                    step="1"
+                    aria-label="Subject age"
+                    value={form.subjectAge}
+                    disabled={!form.enabledVars.subject_age}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        subjectAge: Number(event.target.value),
+                      }))
+                    }
+                  />
+                </div>
+              </VarToggle>
+            </div>
+
+            <VarToggle
+              label="expression"
+              varName="expression"
+              enabled={form.enabledVars.expression}
+              onToggle={(v) => setForm((c) => ({ ...c, enabledVars: { ...c.enabledVars, expression: v } }))}
+            >
+              <div className="candidate-control">
+                <label htmlFor="expression">
+                  <span className="muted-inline">{EXPRESSION_LABELS[form.expression]}</span>
+                </label>
+                <input
+                  id="expression"
+                  className="range-input"
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="1"
+                  value={form.expression}
+                  disabled={!form.enabledVars.expression}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      expression: Number(event.target.value),
                     }))
                   }
                 />
               </div>
-            </div>
+            </VarToggle>
 
-            <div className="candidate-control">
-              <label htmlFor="expression">
-                expression <span className="muted-inline">{EXPRESSION_LABELS[form.expression]}</span>
-              </label>
-              <input
-                id="expression"
-                className="range-input"
-                type="range"
-                min="0"
-                max="10"
-                step="1"
-                value={form.expression}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    expression: Number(event.target.value),
-                  }))
-                }
-              />
-            </div>
-
-            <div className="bg-color-control">
-              <label htmlFor="bg-color">
-                background <span className="muted-inline">{form.bgColor}</span>
-              </label>
-              <div className="bg-color-row">
-                <input
-                  type="color"
-                  className="color-picker-input"
-                  value={form.bgColor}
-                  onChange={(e) =>
-                    setForm((current) => ({ ...current, bgColor: e.target.value }))
-                  }
-                  aria-label="Background color"
-                />
-                <input
-                  type="text"
-                  className="input color-hex-input"
-                  value={form.bgColor}
-                  onChange={(e) =>
-                    setForm((current) => ({ ...current, bgColor: e.target.value }))
-                  }
-                  placeholder="#rrggbb"
-                  spellCheck={false}
-                />
+            <VarToggle
+              label="background"
+              varName="bg_color"
+              enabled={form.enabledVars.bg_color}
+              onToggle={(v) => setForm((c) => ({ ...c, enabledVars: { ...c.enabledVars, bg_color: v } }))}
+            >
+              <div className="bg-color-control">
+                <label htmlFor="bg-color">
+                  <span className="muted-inline">{form.bgColor}</span>
+                </label>
+                <div className="bg-color-row">
+                  <input
+                    type="color"
+                    className="color-picker-input"
+                    value={form.bgColor}
+                    disabled={!form.enabledVars.bg_color}
+                    onChange={(e) =>
+                      setForm((current) => ({ ...current, bgColor: e.target.value }))
+                    }
+                    aria-label="Background color"
+                  />
+                  <input
+                    type="text"
+                    className="input color-hex-input"
+                    value={form.bgColor}
+                    disabled={!form.enabledVars.bg_color}
+                    onChange={(e) =>
+                      setForm((current) => ({ ...current, bgColor: e.target.value }))
+                    }
+                    placeholder="#rrggbb"
+                    spellCheck={false}
+                  />
+                </div>
               </div>
-            </div>
+            </VarToggle>
 
             <div className="candidate-control">
               <label htmlFor="candidate-count">
@@ -1226,6 +1275,38 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
         </section>
       </section>
     </main>
+  );
+}
+
+function VarToggle({
+  label,
+  varName,
+  enabled,
+  onToggle,
+  children,
+}: {
+  label: string;
+  varName: string;
+  enabled: boolean;
+  onToggle: (value: boolean) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`var-toggle-wrap${enabled ? "" : " is-disabled"}`}>
+      <div className="var-toggle-header">
+        <label className="var-toggle-label">
+          <input
+            type="checkbox"
+            className="var-toggle-check"
+            checked={enabled}
+            onChange={(e) => onToggle(e.target.checked)}
+          />
+          <span>{label}</span>
+          <code className="var-toggle-code">{`{{${varName}}}`}</code>
+        </label>
+      </div>
+      {children}
+    </div>
   );
 }
 

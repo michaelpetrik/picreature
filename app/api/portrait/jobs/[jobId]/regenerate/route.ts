@@ -44,6 +44,7 @@ export async function POST(request: Request, context: Context) {
       candidateCount: previousJob.candidateCount,
       expression: previousJob.expression,
       bgColor: previousJob.bgColor,
+      enabledVars: previousJob.enabledVars,
       subjectNote: previousJob.subjectNote,
       subjectGender: previousJob.subjectGender,
       subjectAge: previousJob.subjectAge,

@@ -43,6 +43,7 @@ export class GeminiPortraitClient {
     candidateCount: number;
     expression: number;
     bgColor: string;
+    enabledVars: Record<string, boolean>;
     subjectNote: string;
     subjectGender: SubjectGender;
     subjectAge: number;
@@ -85,6 +86,7 @@ export class GeminiPortraitClient {
               sourceParts,
               expression: params.expression,
               bgColor: params.bgColor,
+              enabledVars: params.enabledVars,
               subjectNote: params.subjectNote,
               subjectGender: params.subjectGender,
               subjectAge: params.subjectAge,
@@ -226,6 +228,7 @@ export class GeminiPortraitClient {
     }>;
     expression: number;
     bgColor: string;
+    enabledVars: Record<string, boolean>;
     subjectNote: string;
     subjectGender: SubjectGender;
     subjectAge: number;
@@ -238,6 +241,7 @@ export class GeminiPortraitClient {
       variantIndex: params.index,
       expression: params.expression,
       bgColor: params.bgColor,
+      enabledVars: params.enabledVars,
       subjectNote: params.subjectNote,
       subjectGender: params.subjectGender,
       subjectAge: params.subjectAge,
@@ -531,18 +535,23 @@ export function renderPromptTemplate(
   subjectAge: number,
   expression = 4,
   bgColor = "#2a2a2a",
+  enabledVars: Record<string, boolean> = {},
 ) {
+  const v = (key: string, value: string) =>
+    enabledVars[key] !== false ? value : "";
+
   return promptTemplate
-    .replaceAll("{{subject_gender}}", subjectGender)
-    .replaceAll("{{subject_age}}", `${subjectAge} years old`)
-    .replaceAll("{{expression}}", EXPRESSION_LABELS[expression] ?? "neutral")
-    .replaceAll("{{bg_color}}", bgColor);
+    .replaceAll("{{subject_gender}}", v("subject_gender", subjectGender))
+    .replaceAll("{{subject_age}}", v("subject_age", `${subjectAge} years old`))
+    .replaceAll("{{expression}}", v("expression", EXPRESSION_LABELS[expression] ?? "neutral"))
+    .replaceAll("{{bg_color}}", v("bg_color", bgColor));
 }
 
 function buildPortraitPrompt(params: {
   variantIndex: number;
   expression: number;
   bgColor: string;
+  enabledVars: Record<string, boolean>;
   subjectNote: string;
   subjectGender: SubjectGender;
   subjectAge: number;
@@ -561,6 +570,7 @@ function buildPortraitPrompt(params: {
     params.subjectAge,
     params.expression,
     params.bgColor,
+    params.enabledVars,
   );
 
   const sections = [

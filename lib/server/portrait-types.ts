@@ -82,6 +82,7 @@ export type PortraitJobRecord = {
   candidateCount: number;
   expression: number;
   bgColor: string;
+  enabledVars: Record<string, boolean>;
   subjectNote: string;
   subjectGender: SubjectGender;
   subjectAge: number;

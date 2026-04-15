@@ -23,6 +23,7 @@ export async function runPortraitJob(jobId: string, apiKey?: string) {
       candidateCount: job.candidateCount,
       expression: job.expression,
       bgColor: job.bgColor,
+      enabledVars: job.enabledVars,
       subjectNote: job.subjectNote,
       subjectGender: job.subjectGender,
       subjectAge: job.subjectAge,

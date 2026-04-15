@@ -68,6 +68,7 @@ export async function readJob(jobId: string) {
     }
     if (record.expression == null) record.expression = 4;
     if (!record.bgColor) record.bgColor = "#2a2a2a";
+    if (!record.enabledVars) record.enabledVars = { subject_gender: true, subject_age: true, expression: true, bg_color: true };
 
     return record as PortraitJobRecord;
   } catch (error) {
@@ -109,6 +110,7 @@ export function createEmptyJob(params: {
   candidateCount: number;
   expression: number;
   bgColor: string;
+  enabledVars: Record<string, boolean>;
   subjectNote: string;
   subjectGender: "male" | "female";
   subjectAge: number;
@@ -125,6 +127,7 @@ export function createEmptyJob(params: {
     candidateCount: params.candidateCount,
     expression: params.expression,
     bgColor: params.bgColor,
+    enabledVars: params.enabledVars,
     subjectNote: params.subjectNote,
     subjectGender: params.subjectGender,
     subjectAge: params.subjectAge,

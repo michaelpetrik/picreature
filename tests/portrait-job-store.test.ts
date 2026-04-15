@@ -28,6 +28,7 @@ describe("cleanupExpiredJobs", () => {
       candidateCount: 4,
       expression: 4,
       bgColor: "#2a2a2a",
+      enabledVars: { subject_gender: true, subject_age: true, expression: true, bg_color: true },
       subjectNote: "",
       subjectGender: "male",
       subjectAge: 32,

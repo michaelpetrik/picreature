@@ -33,6 +33,8 @@ export async function POST(request: Request) {
     const candidateCount = Math.min(8, Math.max(1, Number(formData.get("candidateCount") ?? portraitPreset.candidateCount)));
     const expression = Math.min(10, Math.max(0, Number(formData.get("expression") ?? 4)));
     const bgColor = String(formData.get("bgColor") ?? "#2a2a2a");
+    let enabledVars: Record<string, boolean> = { subject_gender: true, subject_age: true, expression: true, bg_color: true };
+    try { enabledVars = JSON.parse(String(formData.get("enabledVars") ?? "{}")); } catch { /* keep defaults */ }
     const promptTemplate = String(
       formData.get("promptTemplate") ?? portraitPreset.defaultPromptTemplate,
     );
@@ -72,6 +74,7 @@ export async function POST(request: Request) {
       candidateCount,
       expression,
       bgColor,
+      enabledVars,
       subjectNote,
       subjectGender,
       subjectAge,

@@ -317,6 +317,48 @@ textarea {
   display: none;
 }
 
+/* Variable Toggle */
+
+.var-toggle-wrap {
+  display: grid;
+  gap: 6px;
+}
+
+.var-toggle-wrap.is-disabled {
+  opacity: 0.4;
+}
+
+.var-toggle-header {
+  display: flex;
+  align-items: center;
+}
+
+.var-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.86rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.var-toggle-check {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #fff;
+  cursor: pointer;
+}
+
+.var-toggle-code {
+  font-size: 0.72rem;
+  color: var(--line-strong);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .input-preview img {
   width: 100%;
   height: 100%;
