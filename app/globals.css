@@ -429,11 +429,11 @@ select.input {
 
 .gender-select {
   border-bottom: 1px solid var(--line);
-  padding: 10px 28px 8px 0;
+  padding: 8px 28px 6px 0;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-size: 0.86rem;
-  line-height: 1.1;
+  font-size: 0.82rem;
+  line-height: 1.2;
   color-scheme: dark;
   background-image:
     linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, 0.88) 50%),
@@ -458,6 +458,12 @@ select.input {
   color: #fff;
 }
 
+.gender-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  border-bottom-color: var(--line);
+}
+
 .textarea {
   min-height: 110px;
   resize: vertical;
@@ -474,10 +480,59 @@ select.input {
 }
 
 .range-input {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
-  margin: 0;
-  accent-color: #fff;
-  background: transparent;
+  height: 1px;
+  margin: 10px 0;
+  background: var(--line-strong);
+  border: 0;
+  outline: none;
+  cursor: pointer;
+}
+
+.range-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border: 0;
+  cursor: pointer;
+}
+
+.range-input::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.range-input::-webkit-slider-thumb:hover {
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15);
+}
+
+.range-input::-moz-range-thumb:hover {
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15);
+}
+
+.range-input::-webkit-slider-runnable-track {
+  height: 1px;
+  background: var(--line-strong);
+}
+
+.range-input::-moz-range-track {
+  height: 1px;
+  background: var(--line-strong);
+  border: 0;
 }
 
 .inline-fields {
@@ -489,12 +544,12 @@ select.input {
 
 .age-control {
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
 .age-control span {
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
 }
 
 .prompt-field {
@@ -919,26 +974,38 @@ ol.clean {
 }
 
 .color-picker-input {
-  width: 38px;
+  width: 32px;
   height: 32px;
   padding: 0;
   border: 1px solid var(--line);
   background: transparent;
   cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .color-picker-input::-webkit-color-swatch-wrapper {
-  padding: 2px;
+  padding: 1px;
 }
 
 .color-picker-input::-webkit-color-swatch {
   border: none;
 }
 
+.color-picker-input::-moz-color-swatch {
+  border: none;
+}
+
+.color-picker-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
 .color-hex-input {
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   letter-spacing: 0.04em;
   border-bottom: 1px solid var(--line) !important;
+  font-family: inherit;
 }
 
 .muted-inline {
