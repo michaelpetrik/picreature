@@ -1,6 +1,12 @@
 import crypto from "node:crypto";
 import path from "node:path";
-import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_BYTES, MIN_SHORT_EDGE } from "@/lib/server/portrait-constants";
+import sharp from "sharp";
+import {
+  ALLOWED_IMAGE_TYPES,
+  CONVERTIBLE_IMAGE_TYPES,
+  MAX_UPLOAD_BYTES,
+  MIN_SHORT_EDGE,
+} from "@/lib/server/portrait-constants";
 import { PortraitError } from "@/lib/server/portrait-errors";
 
 export function createId(prefix: string): string {
@@ -31,20 +37,65 @@ export function guessExtension(mimeType: string): string {
 
 export async function ensureValidUpload(file: File): Promise<void> {
   if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-    throw new PortraitError("Only JPEG, PNG, and WebP portrait uploads are supported.");
+    throw new PortraitError(
+      "Unsupported image format. Accepted: JPEG, PNG, WebP, HEIC, HEIF, AVIF, TIFF, BMP, GIF.",
+    );
   }
 
   if (file.size > MAX_UPLOAD_BYTES) {
     throw new PortraitError("Upload exceeds the 12 MB size limit.");
   }
 
-  const dimensions = await getImageDimensions(file);
+  const dimensions = CONVERTIBLE_IMAGE_TYPES.has(file.type)
+    ? await getImageDimensionsViaSharp(file)
+    : await getImageDimensions(file);
   const shortEdge = Math.min(dimensions.width, dimensions.height);
   if (shortEdge < MIN_SHORT_EDGE) {
     throw new PortraitError(
       `Portrait is too small. Minimum short edge is ${MIN_SHORT_EDGE}px.`,
     );
   }
+}
+
+/**
+ * Convert a non-native image format to JPEG via sharp.
+ * Returns the converted buffer and the new MIME type + extension.
+ */
+export async function convertToNativeFormat(buffer: Buffer, mimeType: string): Promise<{
+  buffer: Buffer;
+  mimeType: string;
+  extension: string;
+}> {
+  if (!CONVERTIBLE_IMAGE_TYPES.has(mimeType)) {
+    return { buffer, mimeType, extension: guessExtension(mimeType) };
+  }
+
+  try {
+    const converted = await sharp(buffer)
+      .jpeg({ quality: 95, mozjpeg: true })
+      .toBuffer();
+
+    return { buffer: converted, mimeType: "image/jpeg", extension: ".jpg" };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("compression format") || msg.includes("heif") || msg.includes("heic")) {
+      throw new PortraitError(
+        `Unable to convert ${mimeType} — HEVC codec is not available in this environment. Convert the image to JPEG or PNG before uploading.`,
+      );
+    }
+    throw new PortraitError(`Unable to convert ${mimeType} to JPEG: ${msg}`);
+  }
+}
+
+async function getImageDimensionsViaSharp(
+  file: Blob,
+): Promise<{ width: number; height: number }> {
+  const arrayBuffer = await file.arrayBuffer();
+  const meta = await sharp(Buffer.from(arrayBuffer)).metadata();
+  if (!meta.width || !meta.height) {
+    throw new PortraitError("Unable to determine image dimensions.");
+  }
+  return { width: meta.width, height: meta.height };
 }
 
 export async function getImageDimensions(
