@@ -20,19 +20,21 @@ const POLL_INTERVAL_MS = 2200;
 const ACTIVE_JOB_STORAGE_KEY = "picreature.activeJobId";
 
 type FormState = {
-  file: File | null;
+  files: File[];
   subjectNote: string;
   subjectGender: SubjectGender;
   subjectAge: number;
+  candidateCount: number;
   promptTemplate: string;
 };
 
 function createInitialForm(preset: PortraitPreset): FormState {
   return {
-    file: null,
+    files: [],
     subjectNote: "",
     subjectGender: "male",
     subjectAge: 32,
+    candidateCount: preset.candidateCount,
     promptTemplate: preset.defaultPromptTemplate,
   };
 }
@@ -89,7 +91,7 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
   const [selfCheck, setSelfCheck] = useState<ModelSelfCheckResponse | null>(null);
   const [selfCheckLoading, setSelfCheckLoading] = useState(true);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
-  const [inputPreviewUrl, setInputPreviewUrl] = useState<string | null>(null);
+  const [inputPreviewUrls, setInputPreviewUrls] = useState<string[]>([]);
   const [editTarget, setEditTarget] = useState<{ url: string; name: string } | null>(null);
   const pollTimer = useRef<number | null>(null);
   const dragDepth = useRef(0);
@@ -106,7 +108,7 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
   const hasRuntimeApiKey = hasGeminiApiKey || hasSessionApiKey;
 
   const isPolling = job?.status === "queued" || job?.status === "running";
-  const canSubmit = hasRuntimeApiKey && !isSubmitting;
+  const canSubmit = hasRuntimeApiKey && !isSubmitting && form.files.length > 0;
 
   function createAuthHeaders() {
     if (!hasSessionApiKey) {
@@ -385,18 +387,18 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
   }, []);
 
   useEffect(() => {
-    if (!form.file) {
-      setInputPreviewUrl(null);
+    if (form.files.length === 0) {
+      setInputPreviewUrls([]);
       return;
     }
 
-    const nextUrl = URL.createObjectURL(form.file);
-    setInputPreviewUrl(nextUrl);
+    const urls = form.files.map((f) => URL.createObjectURL(f));
+    setInputPreviewUrls(urls);
 
     return () => {
-      URL.revokeObjectURL(nextUrl);
+      urls.forEach((u) => URL.revokeObjectURL(u));
     };
-  }, [form.file]);
+  }, [form.files]);
 
   const currentStatusLabel = useMemo(() => {
     switch (job?.status) {
@@ -464,8 +466,8 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
       return;
     }
 
-    if (!form.file) {
-      setError("Choose a portrait image before starting a job.");
+    if (form.files.length === 0) {
+      setError("Choose at least one portrait image before starting a job.");
       return;
     }
 
@@ -473,10 +475,13 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
     setIsSubmitting(true);
 
     const body = new FormData();
-    body.set("image", form.file);
+    for (const file of form.files) {
+      body.append("image", file);
+    }
     body.set("subjectNote", form.subjectNote);
     body.set("subjectGender", form.subjectGender);
     body.set("subjectAge", String(form.subjectAge));
+    body.set("candidateCount", String(form.candidateCount));
     body.set("promptTemplate", form.promptTemplate);
 
     try {
@@ -525,10 +530,18 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
     setJob(payload);
   }
 
-  function setSelectedFile(file: File | null) {
+  function addFiles(newFiles: File[]) {
+    if (newFiles.length === 0) return;
     setForm((current) => ({
       ...current,
-      file,
+      files: [...current.files, ...newFiles],
+    }));
+  }
+
+  function removeFile(index: number) {
+    setForm((current) => ({
+      ...current,
+      files: current.files.filter((_, i) => i !== index),
     }));
   }
 
@@ -549,9 +562,9 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
     event.preventDefault();
     dragDepth.current = 0;
     setIsDraggingFile(false);
-    const file = event.dataTransfer.files?.[0] ?? null;
-    if (file) {
-      setSelectedFile(file);
+    const files = Array.from(event.dataTransfer.files ?? []);
+    if (files.length > 0) {
+      addFiles(files);
       setError(null);
     }
   }
@@ -684,33 +697,50 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 aria-label="Input image"
-                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+                multiple
+                onChange={(event) => addFiles(Array.from(event.target.files ?? []))}
               />
               <div className="drop-copy">
                 <div className="drop-title">
-                  {isDraggingFile ? "drop image" : "drop image here"}
+                  {isDraggingFile ? "drop images" : "drop images here"}
                 </div>
                 <div className="drop-subtitle">
-                  {form.file ? form.file.name : "or click to choose file"}
+                  {form.files.length > 0
+                    ? `${form.files.length} file${form.files.length > 1 ? "s" : ""} selected`
+                    : "or click to choose files"}
                 </div>
               </div>
             </div>
 
-            {inputPreviewUrl ? (
-              <div className="input-preview">
-                <img src={inputPreviewUrl} alt="Input preview" />
-                <button
-                  className="link-button input-edit-button"
-                  type="button"
-                  onClick={() =>
-                    setEditTarget({
-                      url: inputPreviewUrl,
-                      name: form.file?.name ?? "input",
-                    })
-                  }
-                >
-                  Edit
-                </button>
+            {inputPreviewUrls.length > 0 ? (
+              <div className="input-preview-grid">
+                {inputPreviewUrls.map((url, i) => (
+                  <div key={url} className="input-preview">
+                    <img src={url} alt={`Input ${i + 1}`} />
+                    <div className="input-preview-actions">
+                      <button
+                        className="link-button input-edit-button"
+                        type="button"
+                        onClick={() =>
+                          setEditTarget({
+                            url,
+                            name: form.files[i]?.name ?? "input",
+                          })
+                        }
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="remove-button"
+                        type="button"
+                        onClick={() => removeFile(i)}
+                        aria-label={`Remove image ${i + 1}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : null}
 
@@ -750,6 +780,27 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
                   }
                 />
               </div>
+            </div>
+
+            <div className="candidate-control">
+              <label htmlFor="candidate-count">
+                candidates <span className="muted-inline">{form.candidateCount}</span>
+              </label>
+              <input
+                id="candidate-count"
+                className="range-input"
+                type="range"
+                min="1"
+                max="8"
+                step="1"
+                value={form.candidateCount}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    candidateCount: Number(event.target.value),
+                  }))
+                }
+              />
             </div>
 
             <textarea
@@ -847,16 +898,38 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
           ) : null}
 
           {job?.variants.length ? (
-            <div className="variant-grid">
-              {job.variants.map((variant, index) => (
-                <VariantCard
-                  key={variant.id}
-                  index={index}
-                  variant={variant}
-                  onEdit={() => setEditTarget({ url: variant.previewUrl, name: `candidate-${variant.id}` })}
-                />
-              ))}
-            </div>
+            <>
+              <div className="variant-grid">
+                {job.variants.map((variant, index) => (
+                  <VariantCard
+                    key={variant.id}
+                    index={index}
+                    variant={variant}
+                    onEdit={() => setEditTarget({ url: variant.previewUrl, name: `candidate-${variant.id}` })}
+                  />
+                ))}
+              </div>
+              {job.variants.length > 1 ? (
+                <div className="download-all-row">
+                  <button
+                    className="ghost-button"
+                    type="button"
+                    onClick={() => {
+                      job.variants.forEach((variant, i) => {
+                        setTimeout(() => {
+                          const a = document.createElement("a");
+                          a.href = variant.downloadUrl;
+                          a.download = "";
+                          a.click();
+                        }, i * 300);
+                      });
+                    }}
+                  >
+                    download all ({job.variants.length})
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : (
             <div className="empty-state">no output</div>
           )}

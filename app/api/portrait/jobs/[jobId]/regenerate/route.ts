@@ -25,19 +25,23 @@ export async function POST(request: Request, context: Context) {
     const previousJob = await readJob(jobId);
     const nextJobId = createId("job");
     const nextDir = getJobDir(nextJobId);
-    const sourceBuffer = await fs.readFile(previousJob.sourcePath);
-    const nextSourcePath = path.join(
-      nextDir,
-      `source-${sanitizeFileName(previousJob.sourceFileName)}`,
-    );
 
-    await writeFileBuffer(nextSourcePath, sourceBuffer);
+    const nextSourceFiles: Array<{ fileName: string; mimeType: string; path: string }> = [];
+    for (let i = 0; i < previousJob.sourceFiles.length; i++) {
+      const sf = previousJob.sourceFiles[i];
+      const sourceBuffer = await fs.readFile(sf.path);
+      const nextSourcePath = path.join(
+        nextDir,
+        `source-${i}-${sanitizeFileName(sf.fileName)}`,
+      );
+      await writeFileBuffer(nextSourcePath, sourceBuffer);
+      nextSourceFiles.push({ fileName: sf.fileName, mimeType: sf.mimeType, path: nextSourcePath });
+    }
 
     const nextJob = createEmptyJob({
       jobId: nextJobId,
-      sourceFileName: previousJob.sourceFileName,
-      sourceMimeType: previousJob.sourceMimeType,
-      sourcePath: nextSourcePath,
+      sourceFiles: nextSourceFiles,
+      candidateCount: previousJob.candidateCount,
       subjectNote: previousJob.subjectNote,
       subjectGender: previousJob.subjectGender,
       subjectAge: previousJob.subjectAge,

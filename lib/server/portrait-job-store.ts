@@ -44,7 +44,30 @@ export async function readJob(jobId: string) {
 
   try {
     const raw = await fs.readFile(getJobRecordPath(jobId), "utf-8");
-    return JSON.parse(raw) as PortraitJobRecord;
+    const record = JSON.parse(raw) as PortraitJobRecord & {
+      sourceFileName?: string;
+      sourceMimeType?: string;
+      sourcePath?: string;
+    };
+
+    // Migrate legacy single-source jobs to sourceFiles array
+    if (!record.sourceFiles && record.sourcePath) {
+      record.sourceFiles = [{
+        fileName: record.sourceFileName ?? "source.jpg",
+        mimeType: record.sourceMimeType ?? "image/jpeg",
+        path: record.sourcePath,
+      }];
+      delete record.sourceFileName;
+      delete record.sourceMimeType;
+      delete record.sourcePath;
+    }
+
+    // Default candidateCount for legacy jobs
+    if (!record.candidateCount) {
+      record.candidateCount = portraitPreset.candidateCount;
+    }
+
+    return record as PortraitJobRecord;
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     if (code === "ENOENT") {
@@ -80,9 +103,8 @@ export function mapJobToResponse(record: PortraitJobRecord): PortraitJobResponse
 
 export function createEmptyJob(params: {
   jobId: string;
-  sourceFileName: string;
-  sourceMimeType: string;
-  sourcePath: string;
+  sourceFiles: Array<{ fileName: string; mimeType: string; path: string }>;
+  candidateCount: number;
   subjectNote: string;
   subjectGender: "male" | "female";
   subjectAge: number;
@@ -95,9 +117,8 @@ export function createEmptyJob(params: {
     createdAt: now,
     updatedAt: now,
     expiresAt: new Date(Date.now() + JOB_TTL_MS).toISOString(),
-    sourceFileName: params.sourceFileName,
-    sourceMimeType: params.sourceMimeType,
-    sourcePath: params.sourcePath,
+    sourceFiles: params.sourceFiles,
+    candidateCount: params.candidateCount,
     subjectNote: params.subjectNote,
     subjectGender: params.subjectGender,
     subjectAge: params.subjectAge,

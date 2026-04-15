@@ -39,14 +39,23 @@ export class GeminiPortraitClient {
   }
 
   async generateVariants(params: {
-    sourceMimeType: string;
-    sourcePath: string;
+    sourceFiles: Array<{ fileName: string; mimeType: string; path: string }>;
+    candidateCount: number;
     subjectNote: string;
     subjectGender: SubjectGender;
     subjectAge: number;
     promptTemplate: string;
   }): Promise<GenerateVariantResult> {
-    const sourceBase64 = await readFileBase64(params.sourcePath);
+    // Load all source images as base64
+    const sourceParts = await Promise.all(
+      params.sourceFiles.map(async (sf) => ({
+        inlineData: {
+          mimeType: sf.mimeType,
+          data: await readFileBase64(sf.path),
+        },
+      })),
+    );
+
     const { parts: referenceParts, missingFiles } = await loadReferenceParts();
     const warnings: string[] = [];
     const attemptedModels: PortraitModelAttempt[] = [];
@@ -66,13 +75,12 @@ export class GeminiPortraitClient {
     for (const modelOption of modelChain) {
       try {
         const jobs = Array.from(
-          { length: portraitPreset.candidateCount },
+          { length: params.candidateCount },
           (_, index) =>
             this.generateSingleVariant({
               index,
               model: modelOption.apiName,
-              sourceBase64,
-              sourceMimeType: params.sourceMimeType,
+              sourceParts,
               subjectNote: params.subjectNote,
               subjectGender: params.subjectGender,
               subjectAge: params.subjectAge,
@@ -209,8 +217,9 @@ export class GeminiPortraitClient {
   private async generateSingleVariant(params: {
     index: number;
     model: string;
-    sourceBase64: string;
-    sourceMimeType: string;
+    sourceParts: Array<{
+      inlineData: { mimeType: string; data: string };
+    }>;
     subjectNote: string;
     subjectGender: SubjectGender;
     subjectAge: number;
@@ -232,12 +241,7 @@ export class GeminiPortraitClient {
       contents: [
         { text: prompt },
         ...params.referenceParts,
-        {
-          inlineData: {
-            mimeType: params.sourceMimeType,
-            data: params.sourceBase64,
-          },
-        },
+        ...params.sourceParts,
       ],
       config: {
         responseModalities: ["TEXT", "IMAGE"],

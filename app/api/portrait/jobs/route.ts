@@ -26,16 +26,17 @@ export async function POST(request: Request) {
     }
 
     const formData = await request.formData();
-    const image = formData.get("image");
+    const images = formData.getAll("image").filter((f): f is File => f instanceof File);
     const subjectNote = String(formData.get("subjectNote") ?? "");
     const subjectGender = String(formData.get("subjectGender") ?? "male") as SubjectGender;
     const subjectAge = Number(formData.get("subjectAge") ?? 32);
+    const candidateCount = Math.min(8, Math.max(1, Number(formData.get("candidateCount") ?? portraitPreset.candidateCount)));
     const promptTemplate = String(
       formData.get("promptTemplate") ?? portraitPreset.defaultPromptTemplate,
     );
 
-    if (!(image instanceof File)) {
-      throw new PortraitError("Image upload is required.");
+    if (images.length === 0) {
+      throw new PortraitError("At least one image upload is required.");
     }
 
     if (subjectGender !== "male" && subjectGender !== "female") {
@@ -46,21 +47,27 @@ export async function POST(request: Request) {
       throw new PortraitError("Subject age must be between 18 and 80.");
     }
 
-    await ensureValidUpload(image);
+    for (const image of images) {
+      await ensureValidUpload(image);
+    }
 
     const jobId = createId("job");
     const jobDir = getJobDir(jobId);
-    const fileName = sanitizeFileName(image.name);
-    const sourcePath = path.join(jobDir, `source-${fileName}`);
-    const buffer = Buffer.from(await image.arrayBuffer());
 
-    await writeFileBuffer(sourcePath, buffer);
+    const sourceFiles: Array<{ fileName: string; mimeType: string; path: string }> = [];
+    for (let i = 0; i < images.length; i++) {
+      const image = images[i];
+      const fileName = sanitizeFileName(image.name);
+      const sourcePath = path.join(jobDir, `source-${i}-${fileName}`);
+      const buffer = Buffer.from(await image.arrayBuffer());
+      await writeFileBuffer(sourcePath, buffer);
+      sourceFiles.push({ fileName: image.name, mimeType: image.type, path: sourcePath });
+    }
 
     const job = createEmptyJob({
       jobId,
-      sourceFileName: image.name,
-      sourceMimeType: image.type,
-      sourcePath,
+      sourceFiles,
+      candidateCount,
       subjectNote,
       subjectGender,
       subjectAge,

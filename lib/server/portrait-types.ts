@@ -78,9 +78,8 @@ export type PortraitJobRecord = {
   createdAt: string;
   updatedAt: string;
   expiresAt: string;
-  sourceFileName: string;
-  sourceMimeType: string;
-  sourcePath: string;
+  sourceFiles: Array<{ fileName: string; mimeType: string; path: string }>;
+  candidateCount: number;
   subjectNote: string;
   subjectGender: SubjectGender;
   subjectAge: number;

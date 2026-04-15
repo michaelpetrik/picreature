@@ -19,8 +19,8 @@ export async function runPortraitJob(jobId: string, apiKey?: string) {
   try {
     const client = new GeminiPortraitClient(apiKey);
     const result = await client.generateVariants({
-      sourceMimeType: job.sourceMimeType,
-      sourcePath: job.sourcePath,
+      sourceFiles: job.sourceFiles,
+      candidateCount: job.candidateCount,
       subjectNote: job.subjectNote,
       subjectGender: job.subjectGender,
       subjectAge: job.subjectAge,
@@ -36,7 +36,7 @@ export async function runPortraitJob(jobId: string, apiKey?: string) {
 
     for (const variant of variants) {
       const variantId = createId("variant");
-      const variantPath = path.join(path.dirname(job.sourcePath), variant.fileName);
+      const variantPath = path.join(path.dirname(job.sourceFiles[0].path), variant.fileName);
       await writeFileBuffer(variantPath, variant.bytes);
 
       job.variants.push({
@@ -51,7 +51,7 @@ export async function runPortraitJob(jobId: string, apiKey?: string) {
 
     job.status = "completed";
     job.updatedAt = new Date().toISOString();
-    job.statusMessage = `Four candidates are ready for review. Final model: ${result.selectedModel.label}.`;
+    job.statusMessage = `${job.candidateCount} candidates are ready for review. Final model: ${result.selectedModel.label}.`;
     job.error = undefined;
     job.errorInfo = undefined;
     await saveJob(job);

@@ -55,9 +55,8 @@ describe("ensurePortraitJobRunning", () => {
     await saveJob(
       createEmptyJob({
         jobId,
-        sourceFileName: "portrait.jpg",
-        sourceMimeType: "image/jpeg",
-        sourcePath,
+        sourceFiles: [{ fileName: "portrait.jpg", mimeType: "image/jpeg", path: sourcePath }],
+        candidateCount: 4,
         subjectNote: "",
         subjectGender: "male",
         subjectAge: 32,
@@ -107,9 +106,8 @@ describe("ensurePortraitJobRunning", () => {
     await saveJob(
       createEmptyJob({
         jobId,
-        sourceFileName: "portrait.jpg",
-        sourceMimeType: "image/jpeg",
-        sourcePath,
+        sourceFiles: [{ fileName: "portrait.jpg", mimeType: "image/jpeg", path: sourcePath }],
+        candidateCount: 4,
         subjectNote: "",
         subjectGender: "female",
         subjectAge: 28,
