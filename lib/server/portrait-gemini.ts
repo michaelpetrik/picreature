@@ -3,12 +3,13 @@ import { ApiError, GoogleGenAI } from "@google/genai";
 import { portraitPreset } from "@/lib/config/portrait-preset";
 import { PortraitError } from "@/lib/server/portrait-errors";
 import { readFileBase64 } from "@/lib/server/portrait-storage";
-import type {
-  ModelSelfCheckEntry,
-  ModelSelfCheckResponse,
-  PortraitModelAttempt,
-  PortraitModelOption,
-  SubjectGender,
+import {
+  PROMPT_VAR_DEFAULTS,
+  type ModelSelfCheckEntry,
+  type ModelSelfCheckResponse,
+  type PortraitModelAttempt,
+  type PortraitModelOption,
+  type SubjectGender,
 } from "@/lib/server/portrait-types";
 import { getImageDimensions, guessExtension } from "@/lib/server/portrait-utils";
 
@@ -313,7 +314,7 @@ async function loadReferenceParts() {
         throw error;
       }
 
-       missingFiles.push(referencePath.split("/").pop() ?? referencePath);
+      missingFiles.push(referencePath.split("/").pop() ?? referencePath);
     }
   }
 
@@ -376,23 +377,23 @@ function buildFinalModelError(
   const info =
     status === 429
       ? {
-          retryable: true,
-          retryAfterSeconds,
+        retryable: true,
+        retryAfterSeconds,
+        actionLabel: "Open AI Studio Billing",
+        actionUrl: "https://aistudio.google.com/",
+      }
+      : status === 403
+        ? {
+          retryable: false,
           actionLabel: "Open AI Studio Billing",
           actionUrl: "https://aistudio.google.com/",
         }
-      : status === 403
-        ? {
-            retryable: false,
-            actionLabel: "Open AI Studio Billing",
-            actionUrl: "https://aistudio.google.com/",
-          }
         : status === 404
           ? {
-              retryable: false,
-              actionLabel: "Open Gemini Models",
-              actionUrl: "https://ai.google.dev/gemini-api/docs/models",
-            }
+            retryable: false,
+            actionLabel: "Open Gemini Models",
+            actionUrl: "https://ai.google.dev/gemini-api/docs/models",
+          }
           : undefined;
 
   return new PortraitError(
@@ -537,8 +538,8 @@ export function renderPromptTemplate(
   bgColor = "#2a2a2a",
   enabledVars: Record<string, boolean> = {},
 ) {
-  const v = (key: string, value: string) =>
-    enabledVars[key] !== false ? value : "";
+  const v = (key: keyof typeof PROMPT_VAR_DEFAULTS, value: string) =>
+    enabledVars[key] !== false ? value : PROMPT_VAR_DEFAULTS[key];
 
   return promptTemplate
     .replaceAll("{{subject_gender}}", v("subject_gender", subjectGender))

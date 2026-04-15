@@ -8,6 +8,7 @@ import type {
   PortraitVariantSummary,
   SubjectGender,
 } from "@/lib/server/portrait-types";
+import { PROMPT_VAR_DEFAULTS } from "@/lib/server/portrait-types";
 import { PhotoEditor } from "@/components/photo-editor";
 
 type StudioProps = {
@@ -142,12 +143,14 @@ export function Studio({ preset, hasGeminiApiKey, envFileHint }: StudioProps) {
   const templateFileRef = useRef<HTMLInputElement>(null);
 
   const renderedPromptPreview = useMemo(() => {
-    const v = form.enabledVars;
+    const ev = form.enabledVars;
+    const v = (key: keyof typeof PROMPT_VAR_DEFAULTS, value: string) =>
+      ev[key] !== false ? value : PROMPT_VAR_DEFAULTS[key];
     return form.promptTemplate
-      .replaceAll("{{subject_gender}}", v.subject_gender ? form.subjectGender : "")
-      .replaceAll("{{subject_age}}", v.subject_age ? `${form.subjectAge} years old` : "")
-      .replaceAll("{{expression}}", v.expression ? (EXPRESSION_LABELS[form.expression] ?? "neutral") : "")
-      .replaceAll("{{bg_color}}", v.bg_color ? form.bgColor : "");
+      .replaceAll("{{subject_gender}}", v("subject_gender", form.subjectGender))
+      .replaceAll("{{subject_age}}", v("subject_age", `${form.subjectAge} years old`))
+      .replaceAll("{{expression}}", v("expression", EXPRESSION_LABELS[form.expression] ?? "neutral"))
+      .replaceAll("{{bg_color}}", v("bg_color", form.bgColor));
   }, [form.promptTemplate, form.subjectAge, form.subjectGender, form.expression, form.bgColor, form.enabledVars]);
 
   const hasReferenceSlots = preset.referenceImagePaths.length > 0;

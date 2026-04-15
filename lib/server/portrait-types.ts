@@ -1,5 +1,12 @@
 export type JobStatus = "queued" | "running" | "completed" | "failed";
 
+export const PROMPT_VAR_DEFAULTS = {
+  subject_gender: "person",
+  subject_age: "32 years old",
+  expression: "slight smile",
+  bg_color: "#2a2a2a",
+} as const;
+
 export type BrandBackground = {
   label: string;
   prompt: string;
